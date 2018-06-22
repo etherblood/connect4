@@ -7,12 +7,10 @@ class Connect4:
 		self._height = height
 		self._player_tokens = [0, 0]
 		self._current_player = 0
+		self._full_board = to_flag(width * height) - 1
 		
 		xAxis = to_flag(width) - 1
-		yAxis = 0
-		for y in range(height):
-			yAxis |= to_flag(y * width)
-		self._full_board = xAxis * yAxis
+		yAxis = self._full_board // xAxis
 		self._win_shifts = [1, width - 1, width + 1, width]
 		self._win_masks = [~yAxis, ~(xAxis | (yAxis << (width - 1))), ~(xAxis | yAxis), ~xAxis]
 		for i in range(4):
@@ -27,7 +25,7 @@ class Connect4:
 	def occupied(self):
 		return self._player_tokens[0] | self._player_tokens[1]
 		
-	def convert_column_to_token_move(self, x):
+	def token_move_from_column(self, x):
 		token = to_flag(x)
 		tokens = self.occupied()
 		while token & tokens:

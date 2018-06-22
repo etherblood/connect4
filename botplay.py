@@ -12,7 +12,7 @@ while not state.is_game_over():
 		if(x < 0 or state._width <= x):
 			print("Invalid column")
 		else:
-			token_move = state.convert_column_to_token_move(x)
+			token_move = state.token_move_from_column(x)
 			state.token_move(token_move)
 			print(state.as_string())
 			if not state.is_game_over():
