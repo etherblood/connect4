@@ -1,0 +1,22 @@
+from connect4 import Connect4
+from alphabeta import AlphaBetaBot
+
+state = Connect4()
+print(state.as_string())
+while not state.is_game_over():
+	try:
+		x = int(input('Select move column:'))
+	except ValueError:
+		print("Not a number")
+	else:
+		if(x < 0 or state._width <= x):
+			print("Invalid column")
+		else:
+			token_move = state.convert_column_to_token_move(x)
+			state.token_move(token_move)
+			print(state.as_string())
+			if not state.is_game_over():
+				print("Computing...")
+				state.token_move(AlphaBetaBot().search(state))
+			print(state.as_string())
+print("Game over")
