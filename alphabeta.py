@@ -1,16 +1,7 @@
 from connect4 import Connect4
-from connect4 import to_flag
+from bits import highest_bit
 from evaluation import evaluate
 from evaluation import LOSS_SCORE
-
-def lowest_bit(i):
-	return i & -i
-
-def highest_bit_index(i):
-	return i.bit_length() - 1
-	
-def highest_bit(i):
-	return to_flag(highest_bit_index(i))
 
 class AlphaBetaBot:
 	def __init__(self, depth=7):

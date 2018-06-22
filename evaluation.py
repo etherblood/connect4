@@ -1,16 +1,10 @@
 from connect4 import Connect4
+from bits import sparse_bit_count
 
 SIDE_TO_MOVE = 10
 FACTOR_3 = 18
 
 LOSS_SCORE = -10000
-	
-def sparse_bit_count(i):
-	count = 0
-	while(i):
-		i &= i - 1
-		count += 1
-	return count
     
 def shifts4(state, mask, direction):
 	mask &= mask << (2 * state._win_shifts[direction])

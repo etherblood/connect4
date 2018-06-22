@@ -1,6 +1,5 @@
-def to_flag(index):
-	return 1 << index
-	
+from bits import to_flag
+
 class Connect4:
 	def __init__(self, width=7, height=6):
 		self._width = width
