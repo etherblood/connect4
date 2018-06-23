@@ -7,11 +7,10 @@ class Connect4:
 		self._player_tokens = [0, 0]
 		self._current_player = 0
 		self._full_board = to_flag(width * height) - 1
-		
-		xAxis = to_flag(width) - 1
-		yAxis = self._full_board // xAxis
+		self._x_axis = to_flag(width) - 1
+		self._y_axis = self._full_board // self._x_axis
 		self._win_shifts = [1, width - 1, width + 1, width]
-		self._win_masks = [~yAxis, ~(xAxis | (yAxis << (width - 1))), ~(xAxis | yAxis), ~xAxis]
+		self._win_masks = [~self._y_axis, ~(self._x_axis | (self._y_axis << (width - 1))), ~(self._x_axis | self._y_axis), ~self._x_axis]
 		for i in range(4):
 			self._win_masks[i] &= self._win_masks[i] << self._win_shifts[i]
 	
@@ -59,6 +58,9 @@ class Connect4:
 		
 	def is_game_over(self):
 		return self.is_board_full() or self.opponent_won()
+	
+	def id(self):
+		return ((self.occupied() << self._width) | self._x_axis) ^ self._player_tokens[0]
 		
 	def as_string(self):
 		string = ""

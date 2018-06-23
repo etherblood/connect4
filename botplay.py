@@ -1,5 +1,6 @@
 from connect4 import Connect4
 from alphabeta import AlphaBetaBot
+from transpositions import TranspositionTable
 
 state = Connect4()
 print(state.as_string())
@@ -17,6 +18,6 @@ while not state.is_game_over():
 			print(state.as_string())
 			if not state.is_game_over():
 				print("Computing...")
-				state.token_move(AlphaBetaBot().search(state))
+				state.token_move(AlphaBetaBot(table=TranspositionTable()).search(state))
 			print(state.as_string())
 print("Game over")
