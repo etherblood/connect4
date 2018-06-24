@@ -10,6 +10,9 @@ def highest_bit_index(i):
 def highest_bit(i):
 	return to_flag(highest_bit_index(i))
 
+def bit_count(i):
+    return bin(i).count("1")
+	
 def sparse_bit_count(i):
 	count = 0
 	while(i):

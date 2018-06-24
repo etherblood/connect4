@@ -28,7 +28,7 @@ class Connect4:
 		tokens = self.occupied()
 		while token & tokens:
 			token <<= self._width
-		return token
+		return token & self._full_board
 		
 	def token_moves(self):
 		tokens = self.occupied()
@@ -73,5 +73,6 @@ class Connect4:
 					string += "[O]"
 				else:
 					string += "[ ]"
-			string += "\n"
+			if y:
+				string += "\n"
 		return string

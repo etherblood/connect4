@@ -33,6 +33,8 @@ class AlphaBetaBot:
 				foundPV = True
 		if self._verbose:
 			print("nodes searched: " + str(self._nodes))
+			if self._table:
+				self._table.print_stats()
 		return best_move
 		
 	def alphabeta(self, state, depth, alpha, beta):
@@ -47,8 +49,6 @@ class AlphaBetaBot:
 		if self._table:
 			entry = self._table.load(state.id())
 			if entry and entry.depth >= depth:
-				if entry.type == EXACT:
-					return entry.score
 				if entry.type == UPPER_BOUND:
 					beta = entry.score
 					if alpha >= beta:
@@ -57,6 +57,8 @@ class AlphaBetaBot:
 					alpha = entry.score
 					if alpha >= beta:
 						return beta
+				if entry.type == EXACT:
+					return entry.score
 		
 		type = UPPER_BOUND
 		foundPV = False
@@ -79,7 +81,7 @@ class AlphaBetaBot:
 					break
 				alpha = score
 				foundPV = True
-				type = EXACT;
+				type = EXACT
 		
 		if self._table:
 			self._table.store_raw(state.id(), type, alpha, depth)
