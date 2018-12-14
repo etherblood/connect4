@@ -33,3 +33,22 @@ coverage.xml
 
 # Translations
 *.mo
+nbproject/
+target/
+
+#C++
+Release/
+Debug/
+ipch/
+*.rc
+*.sln
+*.suo
+*.sdf
+*.psess
+*.vsp
+*.vcxproj
+*.vcxproj.filters
+resource.h
+targetver.h
+stdafx.h
+stdafx.cpp

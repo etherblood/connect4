@@ -60,7 +60,7 @@ class Connect4:
 		return self.is_board_full() or self.opponent_won()
 	
 	def id(self):
-		return ((self.occupied() << self._width) | self._x_axis) ^ self._player_tokens[0]
+		return (self.occupied() << self._width) ^ self._player_tokens[0]
 		
 	def as_string(self):
 		string = ""
