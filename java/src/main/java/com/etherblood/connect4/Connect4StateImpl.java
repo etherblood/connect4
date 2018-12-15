@@ -6,41 +6,35 @@ import static com.etherblood.connect4.Util.toFlag;
  *
  * @author Philipp
  */
-public class FastConnect4State implements Connect4State {
+public class Connect4StateImpl implements Connect4State {
 
-    private final int width, height;
+    private final int width, height, bufferedHeight;
     private final long xAxis, yAxis, fullBoard;
     private final int winShift0, winShift1, winShift2, winShift3;
-    private final long winMask0, winMask1, winMask2, winMask3;
     private long tokens0, tokens1;
     private int currentPlayer;
 
-    public FastConnect4State() {
+    public Connect4StateImpl() {
         this(7, 6);
     }
 
-    public FastConnect4State(int width, int height) {
+    public Connect4StateImpl(int width, int height) {
         this.width = width;
         this.height = height;
+        bufferedHeight = height + 1;
+        if(width * bufferedHeight > Long.SIZE) {
+            throw new IllegalArgumentException();
+        }
         tokens0 = 0;
         tokens1 = 0;
         currentPlayer = 0;
-        fullBoard = toFlag(width * height) - 1;
-        xAxis = toFlag(width) - 1;
-        yAxis = fullBoard / xAxis;
-        winShift0 = 1;
-        winShift1 = width - 1;
-        winShift2 = width + 1;
-        winShift3 = width;
-        long baseMask;
-        baseMask = ~yAxis;
-        winMask0 = baseMask & (baseMask << winShift0);
-        baseMask = ~(xAxis | (yAxis << (width - 1)));
-        winMask1 = baseMask & (baseMask << winShift1);
-        baseMask = ~(xAxis | yAxis);
-        winMask2 = baseMask & (baseMask << winShift2);
-        baseMask = ~xAxis;
-        winMask3 = baseMask & (baseMask << winShift3);
+        yAxis = toFlag(height) - 1;
+        xAxis = (toFlag(width * bufferedHeight) - 1) / (toFlag(bufferedHeight) - 1);
+        fullBoard = xAxis * yAxis;
+        winShift0 = bufferedHeight;
+        winShift1 = bufferedHeight - 1;
+        winShift2 = bufferedHeight + 1;
+        winShift3 = 1;
     }
 
     @Override
@@ -59,13 +53,16 @@ public class FastConnect4State implements Connect4State {
 
     @Override
     public long columnToTokenMove(int column) {
-        return tokenMoves() & (yAxis << column);
+        return (occupied() + xAxis) & columnMask(column);
+    }
+
+    private long columnMask(int column) {
+        return yAxis << (column * bufferedHeight);
     }
 
     @Override
     public long tokenMoves() {
-        long tokens = occupied();
-        return ~(tokens | ~tokens << width) & fullBoard;
+        return (occupied() + xAxis) & fullBoard;
     }
 
     @Override
@@ -116,15 +113,14 @@ public class FastConnect4State implements Connect4State {
             default:
                 throw new AssertionError();
         }
-        return winHelper(opponentTokens, winMask0, winShift0) != 0
-                && winHelper(opponentTokens, winMask1, winShift1) != 0
-                && winHelper(opponentTokens, winMask2, winShift2) != 0
-                && winHelper(opponentTokens, winMask3, winShift3) != 0;
+        return shiftWins(opponentTokens, winShift0) != 0
+                && shiftWins(opponentTokens, winShift1) != 0
+                && shiftWins(opponentTokens, winShift2) != 0
+                && shiftWins(opponentTokens, winShift3) != 0;
     }
 
-    private long winHelper(long tokens, long winMask, int winShift) {
+    private long shiftWins(long tokens, int winShift) {
         tokens &= tokens << (2 * winShift);
-        tokens &= winMask;
         tokens &= tokens << winShift;
         return tokens;
     }
@@ -136,15 +132,15 @@ public class FastConnect4State implements Connect4State {
 
     @Override
     public long id() {
-        return ((occupied() << width) | xAxis) ^ tokens0;
+        return ((occupied() << 1) | xAxis) ^ tokens0;
     }
 
     @Override
     public String asString() {
         String string = "";
-        for (int y = height - 1; y < height; y--) {
+        for (int y = height - 1; y >= 0; y--) {
             for (int x = 0; x < width; x++) {
-                long token = toFlag(x + y * width);
+                long token = toFlag(y + x * bufferedHeight);
                 if ((tokens0 & token) != 0) {
                     string += "[X]";
                 } else if ((tokens1 & token) != 0) {
