@@ -6,7 +6,7 @@ package com.etherblood.connect4;
  */
 public interface Connect4State {
 
-    int currentPlayer();
+    int activePlayer();
 
     int opponent();
 

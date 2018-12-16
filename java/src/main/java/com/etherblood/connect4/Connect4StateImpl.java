@@ -11,8 +11,8 @@ public class Connect4StateImpl implements Connect4State {
     private final int width, height, bufferedHeight;
     private final long xAxis, yAxis, fullBoard;
     private final int winShift0, winShift1, winShift2, winShift3;
-    private long tokens0, tokens1;
-    private int currentPlayer;
+    private long player0Tokens, player1Tokens;
+    private boolean player1Active;
 
     public Connect4StateImpl() {
         this(7, 6);
@@ -22,12 +22,12 @@ public class Connect4StateImpl implements Connect4State {
         this.width = width;
         this.height = height;
         bufferedHeight = height + 1;
-        if(width * bufferedHeight > Long.SIZE) {
+        if (width * bufferedHeight > Long.SIZE) {
             throw new IllegalArgumentException();
         }
-        tokens0 = 0;
-        tokens1 = 0;
-        currentPlayer = 0;
+        player0Tokens = 0;
+        player1Tokens = 0;
+        player1Active = false;
         yAxis = toFlag(height) - 1;
         xAxis = (toFlag(width * bufferedHeight) - 1) / (toFlag(bufferedHeight) - 1);
         fullBoard = xAxis * yAxis;
@@ -38,17 +38,17 @@ public class Connect4StateImpl implements Connect4State {
     }
 
     @Override
-    public int currentPlayer() {
-        return currentPlayer;
+    public int activePlayer() {
+        return player1Active ? 1 : 0;
     }
 
     @Override
     public int opponent() {
-        return currentPlayer ^ 1;
+        return player1Active ? 0 : 1;
     }
 
     private long occupied() {
-        return tokens0 | tokens1;
+        return player0Tokens | player1Tokens;
     }
 
     @Override
@@ -67,31 +67,23 @@ public class Connect4StateImpl implements Connect4State {
 
     @Override
     public void tokenMove(long token) {
-        switch (currentPlayer) {
-            case 0:
-                tokens0 ^= token;
-                break;
-            case 1:
-                tokens1 ^= token;
-                break;
-            default:
-                throw new AssertionError();
+        if (player1Active) {
+            player1Tokens ^= token;
+            player1Active = false;
+        } else {
+            player0Tokens ^= token;
+            player1Active = true;
         }
-        currentPlayer = opponent();
     }
 
     @Override
     public void tokenUndo(long token) {
-        currentPlayer = opponent();
-        switch (currentPlayer) {
-            case 0:
-                tokens0 ^= token;
-                break;
-            case 1:
-                tokens1 ^= token;
-                break;
-            default:
-                throw new AssertionError();
+        if (player1Active) {
+            player1Active = false;
+            player0Tokens ^= token;
+        } else {
+            player1Active = true;
+            player1Tokens ^= token;
         }
     }
 
@@ -103,15 +95,10 @@ public class Connect4StateImpl implements Connect4State {
     @Override
     public boolean opponentWon() {
         long opponentTokens;
-        switch (currentPlayer) {
-            case 0:
-                opponentTokens = tokens1;
-                break;
-            case 1:
-                opponentTokens = tokens0;
-                break;
-            default:
-                throw new AssertionError();
+        if(player1Active) {
+            opponentTokens = player0Tokens;
+        } else {
+            opponentTokens = player1Tokens;
         }
         return shiftWins(opponentTokens, winShift0) != 0
                 && shiftWins(opponentTokens, winShift1) != 0
@@ -132,7 +119,7 @@ public class Connect4StateImpl implements Connect4State {
 
     @Override
     public long id() {
-        return ((occupied() << 1) | xAxis) ^ tokens0;
+        return ((occupied() << 1) | xAxis) ^ player0Tokens;
     }
 
     @Override
@@ -141,9 +128,9 @@ public class Connect4StateImpl implements Connect4State {
         for (int y = height - 1; y >= 0; y--) {
             for (int x = 0; x < width; x++) {
                 long token = toFlag(y + x * bufferedHeight);
-                if ((tokens0 & token) != 0) {
+                if ((player0Tokens & token) != 0) {
                     string += "[X]";
-                } else if ((tokens1 & token) != 0) {
+                } else if ((player1Tokens & token) != 0) {
                     string += "[O]";
                 } else {
                     string += "[ ]";
