@@ -8,11 +8,11 @@ import static com.etherblood.connect4.Util.toFlag;
  */
 public class Connect4StateImpl implements Connect4State {
 
-    private final int width, height, bufferedHeight;
-    private final long xAxis, yAxis, fullBoard;
-    private final int winShift0, winShift1, winShift2, winShift3;
-    private long player0Tokens, player1Tokens;
-    private boolean player1Active;
+    public final int width, height, bufferedHeight;
+    public final long xAxis, yAxis, fullBoard;
+    public final int direction0, direction1, direction2, direction3;
+    public long player0Tokens, player1Tokens;
+    public boolean player1Active;
 
     public Connect4StateImpl() {
         this(7, 6);
@@ -31,10 +31,10 @@ public class Connect4StateImpl implements Connect4State {
         yAxis = toFlag(height) - 1;
         xAxis = (toFlag(width * bufferedHeight) - 1) / (toFlag(bufferedHeight) - 1);
         fullBoard = xAxis * yAxis;
-        winShift0 = bufferedHeight;
-        winShift1 = bufferedHeight - 1;
-        winShift2 = bufferedHeight + 1;
-        winShift3 = 1;
+        direction0 = bufferedHeight;
+        direction1 = bufferedHeight - 1;
+        direction2 = bufferedHeight + 1;
+        direction3 = 1;
     }
 
     @Override
@@ -95,20 +95,20 @@ public class Connect4StateImpl implements Connect4State {
     @Override
     public boolean opponentWon() {
         long opponentTokens;
-        if(player1Active) {
+        if (player1Active) {
             opponentTokens = player0Tokens;
         } else {
             opponentTokens = player1Tokens;
         }
-        return shiftWins(opponentTokens, winShift0) != 0
-                && shiftWins(opponentTokens, winShift1) != 0
-                && shiftWins(opponentTokens, winShift2) != 0
-                && shiftWins(opponentTokens, winShift3) != 0;
+        return squishConnected(opponentTokens, direction0) != 0
+                && squishConnected(opponentTokens, direction1) != 0
+                && squishConnected(opponentTokens, direction2) != 0
+                && squishConnected(opponentTokens, direction3) != 0;
     }
 
-    private long shiftWins(long tokens, int winShift) {
-        tokens &= tokens << (2 * winShift);
-        tokens &= tokens << winShift;
+    private long squishConnected(long tokens, int directionShift) {
+        tokens &= tokens << (2 * directionShift);
+        tokens &= tokens << directionShift;
         return tokens;
     }
 
@@ -129,9 +129,9 @@ public class Connect4StateImpl implements Connect4State {
             for (int x = 0; x < width; x++) {
                 long token = toFlag(y + x * bufferedHeight);
                 if ((player0Tokens & token) != 0) {
-                    string += "[X]";
+                    string += "[0]";
                 } else if ((player1Tokens & token) != 0) {
-                    string += "[O]";
+                    string += "[1]";
                 } else {
                     string += "[ ]";
                 }
