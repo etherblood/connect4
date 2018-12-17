@@ -119,7 +119,7 @@ public class Connect4StateImpl implements Connect4State {
 
     @Override
     public long id() {
-        return ((occupied() << 1) | xAxis) ^ player0Tokens;
+        return (occupied() + xAxis) ^ player0Tokens;
     }
 
     @Override
