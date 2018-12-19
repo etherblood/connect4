@@ -27,15 +27,15 @@ public class Perft {
             return 0;
         }
         if(depth == 1) {
-            return Long.bitCount(state.tokenMoves());
+            return Long.bitCount(state.availableMoves());
         }
         long sum = 0;
-        long moves = state.tokenMoves();
+        long moves = state.availableMoves();
         while(moves != 0) {
             long move = Long.lowestOneBit(moves);
-            state.tokenMove(move);
+            state.move(move);
             sum += positiveDepthPerft(depth - 1);
-            state.tokenUndo(move);
+            state.unmove(move);
             moves ^= move;
         }
         return sum;

@@ -10,13 +10,13 @@ public interface Connect4State {
 
     int opponent();
 
-    long columnToTokenMove(int column);
+    long availableColumnMove(int column);
 
-    long tokenMoves();
+    long availableMoves();
 
-    void tokenMove(long token);
+    void move(long token);
 
-    void tokenUndo(long token);
+    void unmove(long token);
 
     boolean isBoardFull();
 
@@ -25,6 +25,6 @@ public interface Connect4State {
     boolean isGameOver();
 
     long id();
-
+    
     String asString();
 }

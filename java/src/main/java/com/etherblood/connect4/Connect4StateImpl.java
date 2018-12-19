@@ -1,6 +1,7 @@
 package com.etherblood.connect4;
 
-import static com.etherblood.connect4.Util.toFlag;
+import static com.etherblood.connect4.Util.Long.toFlag;
+import static com.etherblood.connect4.Util.Long.toMask;
 
 /**
  *
@@ -10,7 +11,7 @@ public class Connect4StateImpl implements Connect4State {
 
     public final int width, height, bufferedHeight;
     public final long xAxis, yAxis, fullBoard;
-    public final int direction0, direction1, direction2, direction3;
+    public final int right, rightDown, rightUp, up;
     public long player0Tokens, player1Tokens;
     public boolean player1Active;
 
@@ -28,13 +29,13 @@ public class Connect4StateImpl implements Connect4State {
         player0Tokens = 0;
         player1Tokens = 0;
         player1Active = false;
-        yAxis = toFlag(height) - 1;
-        xAxis = (toFlag(width * bufferedHeight) - 1) / (toFlag(bufferedHeight) - 1);
+        yAxis = toMask(height);
+        xAxis = toMask(width * bufferedHeight) / toMask(bufferedHeight);
         fullBoard = xAxis * yAxis;
-        direction0 = bufferedHeight;
-        direction1 = bufferedHeight - 1;
-        direction2 = bufferedHeight + 1;
-        direction3 = 1;
+        up = 1;
+        right = bufferedHeight;
+        rightDown = right - up;
+        rightUp = right + up;
     }
 
     @Override
@@ -52,7 +53,7 @@ public class Connect4StateImpl implements Connect4State {
     }
 
     @Override
-    public long columnToTokenMove(int column) {
+    public long availableColumnMove(int column) {
         return (occupied() + xAxis) & columnMask(column);
     }
 
@@ -61,12 +62,12 @@ public class Connect4StateImpl implements Connect4State {
     }
 
     @Override
-    public long tokenMoves() {
+    public long availableMoves() {
         return (occupied() + xAxis) & fullBoard;
     }
 
     @Override
-    public void tokenMove(long token) {
+    public void move(long token) {
         if (player1Active) {
             player1Tokens ^= token;
             player1Active = false;
@@ -77,7 +78,7 @@ public class Connect4StateImpl implements Connect4State {
     }
 
     @Override
-    public void tokenUndo(long token) {
+    public void unmove(long token) {
         if (player1Active) {
             player1Active = false;
             player0Tokens ^= token;
@@ -100,10 +101,10 @@ public class Connect4StateImpl implements Connect4State {
         } else {
             opponentTokens = player1Tokens;
         }
-        return squishConnected(opponentTokens, direction0) != 0
-                && squishConnected(opponentTokens, direction1) != 0
-                && squishConnected(opponentTokens, direction2) != 0
-                && squishConnected(opponentTokens, direction3) != 0;
+        return squishConnected(opponentTokens, rightUp) != 0
+                && squishConnected(opponentTokens, rightDown) != 0
+                && squishConnected(opponentTokens, right) != 0
+                && squishConnected(opponentTokens, up) != 0;
     }
 
     private long squishConnected(long tokens, int directionShift) {
