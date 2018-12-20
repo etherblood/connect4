@@ -36,6 +36,10 @@ coverage.xml
 nbproject/
 target/
 
+.classpath
+.project
+.settings
+
 #C++
 Release/
 Debug/
