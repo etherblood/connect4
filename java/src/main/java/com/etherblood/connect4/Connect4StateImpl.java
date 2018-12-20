@@ -23,7 +23,7 @@ public class Connect4StateImpl implements Connect4State {
         this.width = width;
         this.height = height;
         bufferedHeight = height + 1;
-        if (width * bufferedHeight > Long.SIZE) {
+        if (width * bufferedHeight - 1 > Long.SIZE) {
             throw new IllegalArgumentException();
         }
         player0Tokens = 0;
@@ -34,8 +34,8 @@ public class Connect4StateImpl implements Connect4State {
         fullBoard = xAxis * yAxis;
         up = 1;
         right = bufferedHeight;
-        rightDown = right - up;
         rightUp = right + up;
+        rightDown = right - up;
     }
 
     @Override
