@@ -1,6 +1,9 @@
+def to_mask(index):
+	return to_flag(index) - 1
+
 def to_flag(index):
 	return 1 << index
-
+	
 def lowest_bit(i):
 	return i & -i
 
