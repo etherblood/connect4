@@ -1,6 +1,5 @@
 package com.etherblood.connect4;
 
-import static com.etherblood.connect4.Util.Long.toFlag;
 import static com.etherblood.connect4.Util.Long.toMask;
 
 /**
@@ -40,12 +39,19 @@ public class Connect4StateImpl implements Connect4State {
 
     @Override
     public int activePlayer() {
-        return player1Active ? 1 : 0;
+        return player1Active ? PLAYER_1 : PLAYER_0;
     }
 
     @Override
-    public int opponent() {
-        return player1Active ? 0 : 1;
+    public long playerTokens(int player) {
+        switch (player) {
+            case 0:
+                return player0Tokens;
+            case 1:
+                return player1Tokens;
+            default:
+                throw new AssertionError(player);
+        }
     }
 
     private long occupied() {
@@ -57,8 +63,14 @@ public class Connect4StateImpl implements Connect4State {
         return (occupied() + xAxis) & columnMask(column);
     }
 
-    private long columnMask(int column) {
+    @Override
+    public long columnMask(int column) {
         return yAxis << (column * bufferedHeight);
+    }
+
+    @Override
+    public long rowMask(int row) {
+        return xAxis << row;
     }
 
     @Override
@@ -101,21 +113,16 @@ public class Connect4StateImpl implements Connect4State {
         } else {
             opponentTokens = player1Tokens;
         }
-        return squishConnected(opponentTokens, rightUp) != 0
-                && squishConnected(opponentTokens, rightDown) != 0
-                && squishConnected(opponentTokens, right) != 0
-                && squishConnected(opponentTokens, up) != 0;
+        return squish(opponentTokens, rightUp) != 0
+                && squish(opponentTokens, rightDown) != 0
+                && squish(opponentTokens, right) != 0
+                && squish(opponentTokens, up) != 0;
     }
 
-    private long squishConnected(long tokens, int directionShift) {
+    private long squish(long tokens, int directionShift) {
         tokens &= tokens << (2 * directionShift);
         tokens &= tokens << directionShift;
         return tokens;
-    }
-
-    @Override
-    public boolean isGameOver() {
-        return isBoardFull() || opponentWon();
     }
 
     @Override
@@ -124,23 +131,12 @@ public class Connect4StateImpl implements Connect4State {
     }
 
     @Override
-    public String asString() {
-        String string = "";
-        for (int y = height - 1; y >= 0; y--) {
-            for (int x = 0; x < width; x++) {
-                long token = toFlag(y + x * bufferedHeight);
-                if ((player0Tokens & token) != 0) {
-                    string += "[0]";
-                } else if ((player1Tokens & token) != 0) {
-                    string += "[1]";
-                } else {
-                    string += "[ ]";
-                }
-            }
-            if (y != 0) {
-                string += "\n";
-            }
-        }
-        return string;
+    public int width() {
+        return width;
+    }
+
+    @Override
+    public int height() {
+        return height;
     }
 }
