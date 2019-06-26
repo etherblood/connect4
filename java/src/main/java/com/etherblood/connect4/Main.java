@@ -10,8 +10,8 @@ import com.etherblood.connect4.transpositions.LongTranspositionTable;
 public class Main {
 
     public static void main(String... args) {
-//        perft();
-        botGame();
+        perft();
+//        botGame();
     }
 
     private static void botGame() {

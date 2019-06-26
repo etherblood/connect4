@@ -24,7 +24,7 @@ public class Perft {
     
     private long positiveDepthPerft(int depth) {
         if(state.isGameOver()) {
-            return 0;
+            return 1;
         }
         if(depth == 1) {
             return Long.bitCount(state.availableMoves());

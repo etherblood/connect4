@@ -1,6 +1,8 @@
 package com.etherblood.connect4.eval;
 
 import com.etherblood.connect4.Connect4StateImpl;
+import static com.etherblood.connect4.TokenUtil.squish;
+import static com.etherblood.connect4.TokenUtil.stretch;
 
 public class SimpleEvaluation implements Evaluation {
 
@@ -48,18 +50,6 @@ public class SimpleEvaluation implements Evaluation {
         tokens &= tokens << direction;
         score -= FACTOR_3 * Long.bitCount(candidates & tokens);
         return score;
-    }
-
-    private long squish(long mask, int direction) {
-        mask &= mask << (2 * direction);
-        mask &= mask << direction;
-        return mask;
-    }
-
-    private long stretch(long mask, int direction) {
-        mask |= mask >>> (2 * direction);
-        mask |= mask >>> direction;
-        return mask;
     }
 
     @Override

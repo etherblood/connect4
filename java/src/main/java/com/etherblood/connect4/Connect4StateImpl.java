@@ -114,9 +114,9 @@ public class Connect4StateImpl implements Connect4State {
             opponentTokens = player1Tokens;
         }
         return squish(opponentTokens, rightUp) != 0
-                && squish(opponentTokens, rightDown) != 0
-                && squish(opponentTokens, right) != 0
-                && squish(opponentTokens, up) != 0;
+                || squish(opponentTokens, rightDown) != 0
+                || squish(opponentTokens, right) != 0
+                || squish(opponentTokens, up) != 0;
     }
 
     private long squish(long tokens, int directionShift) {
