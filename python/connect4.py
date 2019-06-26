@@ -45,7 +45,7 @@ class Connect4:
 		
 	def opponent_won(self):
 		tokens = self._player_tokens[self.opponent()]
-		return self.squish(tokens, self._right_up) and self.squish(tokens, self._right_down) and self.squish(tokens, self._right) and self.squish(tokens, self._up)
+		return self.squish(tokens, self._right_up) or self.squish(tokens, self._right_down) or self.squish(tokens, self._right) or self.squish(tokens, self._up)
 	
 	def squish(self, tokens, direction):
 		tokens &= tokens << (2 * direction)
