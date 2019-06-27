@@ -9,8 +9,8 @@ public class TokenUtil {
     public static final int RIGHT, RIGHT_DOWN, RIGHT_UP, UP;
 
     static {
-        WIDTH = 5;
-        HEIGHT = 5;
+        WIDTH = 6;
+        HEIGHT = 6;
 
         BUFFERED_HEIGHT = HEIGHT + 1;
         if (WIDTH * BUFFERED_HEIGHT > Long.SIZE) {
