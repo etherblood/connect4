@@ -39,10 +39,9 @@ public class SolverTable {
         loads++;
         int index = index(stateId);
         long rawEntry = data[index];
-        int values = (int) rawEntry;
         if (((rawEntry ^ stateId) & ID_MASK) == 0) {
             hits++;
-            return values & toMask(SCORE_BITS);
+            return (int) rawEntry & toMask(SCORE_BITS);
         }
         misses++;
         return UNKNOWN_SCORE;
@@ -69,7 +68,7 @@ public class SolverTable {
         System.out.println(" stores: " + stores);
         int full = 0, empty = 0;
         for (int i = 0; i < data.length; i++) {
-            if(data[i] == 0) {
+            if (data[i] == 0) {
                 empty++;
             } else {
                 full++;
