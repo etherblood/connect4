@@ -12,7 +12,7 @@ public class TokenUtil {
     public static final long[] WIN_CHECK_PATTERNS;
 
     static {
-        WIDTH = 6;
+        WIDTH = 7;
         HEIGHT = 6;
 
         BUFFERED_HEIGHT = HEIGHT + 1;
