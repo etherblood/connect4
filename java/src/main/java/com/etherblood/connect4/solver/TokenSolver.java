@@ -17,7 +17,7 @@ public class TokenSolver {
     }
 
     public static void main(String[] args) {
-        TokenSolver solver = new TokenSolver(new SolverTable(27));
+        TokenSolver solver = new TokenSolver(new SolverTable(28));
         long ownTokens = 0;
         long opponentTokens = 0;
         System.out.println(TokenUtil.toString(ownTokens, opponentTokens));
@@ -50,7 +50,7 @@ public class TokenSolver {
         }
 
         boolean useTT = (Long.bitCount(ownTokens | opponentTokens) & 1) != 0;
-        long id = useTT ? TokenUtil.id(ownTokens, opponentTokens) : 0;
+        long id = useTT ? TokenUtil.hash(ownTokens, opponentTokens) : 0;
         int entryScore = useTT ? table.load(id) : 0;
         if (useTT) {
             switch (entryScore) {
@@ -81,17 +81,13 @@ public class TokenSolver {
 
         boolean exact = false;
         if (TokenUtil.isSymmetrical(ownTokens) && TokenUtil.isSymmetrical(opponentTokens)) {
-            long movesIterator = moves & TokenUtil.CENTER_COLUMN;
-            moves &= ~TokenUtil.CENTER_COLUMN;
-            //prune symmetrical moves
-            moves &= TokenUtil.LEFT_SIDE;
-            while (movesIterator != 0) {
-                long move = Long.lowestOneBit(movesIterator);
+            long move = moves & TokenUtil.CENTER_COLUMN;
+            if (move != 0) {
                 int score = -solve(opponentTokens, TokenUtil.move(ownTokens, move), -beta, -alpha);
                 if (score > alpha) {
                     if (score >= beta) {
                         int nextEntryScore = score == WIN_SCORE ? SolverTable.WIN_SCORE : SolverTable.DRAW_WIN_SCORE;
-                        if (entryScore != nextEntryScore) {
+                        if (useTT && entryScore != nextEntryScore) {
                             table.store(id, nextEntryScore);
                         }
                         return score;
@@ -99,8 +95,9 @@ public class TokenSolver {
                     alpha = score;
                     exact = true;
                 }
-                movesIterator ^= move;
             }
+            //prune symmetrical moves
+            moves &= TokenUtil.LEFT_SIDE;
         }
 
         //fill columns asap to reduce branching factor by playing topmost moves first
@@ -112,7 +109,7 @@ public class TokenSolver {
                 if (score > alpha) {
                     if (score >= beta) {
                         int nextEntryScore = score == WIN_SCORE ? SolverTable.WIN_SCORE : SolverTable.DRAW_WIN_SCORE;
-                        if (entryScore != nextEntryScore) {
+                        if (useTT && entryScore != nextEntryScore) {
                             table.store(id, nextEntryScore);
                         }
                         return score;
@@ -124,10 +121,11 @@ public class TokenSolver {
             }
         }
 
-        if (useTT) {
-            int nextEntryScore = alpha == LOSS_SCORE ? SolverTable.LOSS_SCORE : (exact ? SolverTable.DRAW_SCORE : SolverTable.DRAW_LOSS_SCORE);
-            if (entryScore != nextEntryScore) {
-                table.store(id, nextEntryScore);
+        int nextEntryScore = alpha == LOSS_SCORE ? SolverTable.LOSS_SCORE : (exact ? SolverTable.DRAW_SCORE : SolverTable.DRAW_LOSS_SCORE);
+        if (useTT && entryScore != nextEntryScore) {
+            table.store(id, nextEntryScore);
+            if (table.load(id) != nextEntryScore) {
+                throw new AssertionError();
             }
         }
         return alpha;

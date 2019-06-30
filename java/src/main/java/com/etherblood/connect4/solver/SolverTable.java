@@ -4,7 +4,6 @@ import static com.etherblood.connect4.Util.Int.toMask;
 
 public class SolverTable {
 
-    private static final long GOLDEN_MULTIPLIER = 0x9e3779b97f4a7c15L;
     public static final int UNKNOWN_SCORE = 0;
     public static final int WIN_SCORE = 1;
     public static final int DRAW_SCORE = 2;
@@ -13,15 +12,14 @@ public class SolverTable {
     public static final int DRAW_LOSS_SCORE = 5;
 
     private static final int SCORE_BITS = 3;
-    private static final long ID_MASK = ~0L << SCORE_BITS;
+    private static final int ID_MASK = ~0 << SCORE_BITS;
 
-    private final long[] data;
-    private final int sizeBase, mask;
+    private final int[] data;
+    private final int mask;
     private long hits, misses, overwrites, stores, loads;
 
     public SolverTable(int sizeBase) {
-        this.sizeBase = sizeBase;
-        data = new long[1 << sizeBase];
+        data = new int[1 << sizeBase];
         mask = toMask(sizeBase);
         hits = 0;
         misses = 0;
@@ -30,33 +28,32 @@ public class SolverTable {
         loads = 0;
     }
 
-    private int index(long stateId) {
-        long hash = GOLDEN_MULTIPLIER * stateId;
-        return (int) (hash >>> (Long.SIZE - sizeBase)) & mask;
-    }
-
-    public int load(long stateId) {
+    public int load(long hash) {
         loads++;
-        int index = index(stateId);
-        long rawEntry = data[index];
-        if (((rawEntry ^ stateId) & ID_MASK) == 0) {
+        int index = index(hash);
+        int rawEntry = data[index];
+        if (((rawEntry ^ (int)hash) & ID_MASK) == 0) {
             hits++;
-            return (int) rawEntry & toMask(SCORE_BITS);
+            return rawEntry & toMask(SCORE_BITS);
         }
         misses++;
         return UNKNOWN_SCORE;
     }
 
-    public void store(long stateId, int score) {
+    public void store(long hash, int score) {
         stores++;
-        long values = 0;
+        int values = 0;
         values |= score & toMask(SCORE_BITS);
-        values |= stateId & ID_MASK;
-        int index = index(stateId);
+        values |= (int)hash & ID_MASK;
+        int index = index(hash);
         if (data[index] != 0) {
             overwrites++;
         }
         data[index] = values;
+    }
+
+    private int index(long hash) {
+        return (int) (hash >>> 32) & mask;
     }
 
     public void printStats() {
@@ -66,15 +63,13 @@ public class SolverTable {
         System.out.println(" overwrites: " + overwrites);
         System.out.println(" loads: " + loads);
         System.out.println(" stores: " + stores);
-        int full = 0, empty = 0;
+        int[] scores = new int[6];
         for (int i = 0; i < data.length; i++) {
-            if (data[i] == 0) {
-                empty++;
-            } else {
-                full++;
-            }
+            scores[data[i] & toMask(SCORE_BITS)]++;
         }
-        System.out.println(" full: " + full);
-        System.out.println(" empty: " + empty);
+        String[] scoreNames = {"empty", "win", "draw", "loss", "draw+", "draw-"};
+        for (int i = 0; i < 6; i++) {
+            System.out.println("  " + scoreNames[i] + ": " + scores[i]);
+        }
     }
 }

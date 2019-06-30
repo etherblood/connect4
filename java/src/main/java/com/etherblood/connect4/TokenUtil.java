@@ -4,6 +4,7 @@ import static com.etherblood.connect4.Util.Long.toMask;
 
 public class TokenUtil {
 
+    private static final long GOLDEN_MULTIPLIER = 0x9e3779b97f4a7c15L;
     public static final int WIDTH, HEIGHT, BUFFERED_HEIGHT;
     public static final long X_AXIS, Y_AXIS, FULL_BOARD, LEFT_SIDE, CENTER_COLUMN;
     public static final int RIGHT, RIGHT_DOWN, RIGHT_UP, UP;
@@ -25,7 +26,7 @@ public class TokenUtil {
         RIGHT_UP = RIGHT + UP;
         RIGHT_DOWN = RIGHT - UP;
         FULL_BOARD = X_AXIS * Y_AXIS;
-        LEFT_SIDE = FULL_BOARD >>> (WIDTH / 2 * RIGHT);
+        LEFT_SIDE = FULL_BOARD >>> (Util.Int.ceilDiv(WIDTH, 2) * RIGHT);
         CENTER_COLUMN = (WIDTH & 1) != 0 ? Y_AXIS << (WIDTH / 2 * RIGHT) : 0;
 
         WIN_CHECK_PATTERNS = new long[4];
@@ -98,6 +99,10 @@ public class TokenUtil {
         return ownTokens | opponentTokens;
     }
 
+    public static long hash(long ownTokens, long opponentTokens) {
+        return GOLDEN_MULTIPLIER * id(ownTokens, opponentTokens);
+    }
+    
     public static long id(long ownTokens, long opponentTokens) {
         return (occupied(ownTokens, opponentTokens) + X_AXIS) ^ ownTokens;
     }
