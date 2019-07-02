@@ -2,7 +2,6 @@ package com.etherblood.connect4;
 
 import static com.etherblood.connect4.TokenUtil.FULL_BOARD;
 import static com.etherblood.connect4.TokenUtil.generateMoves;
-import static com.etherblood.connect4.TokenUtil.isGameOver;
 import static com.etherblood.connect4.TokenUtil.isWin;
 import static com.etherblood.connect4.TokenUtil.move;
 import static com.etherblood.connect4.TokenUtil.occupied;

@@ -4,7 +4,7 @@ import com.etherblood.connect4.TokenUtil;
 import com.etherblood.connect4.Util;
 import java.util.Arrays;
 
-public class TokenSolver {
+public class TokenSolver extends TokenUtil {
 
     private static final int WIN_SCORE = 1;
     private static final int DRAW_SCORE = 0;
@@ -19,23 +19,23 @@ public class TokenSolver {
 
     static {
         //fill columns asap to reduce branching factor by playing topmost moves first
-        MOVE_ORDER_DEFAULT = new long[TokenUtil.HEIGHT];
-        for (int y = 0; y < TokenUtil.HEIGHT; y++) {
-            long mask = TokenUtil.X_AXIS << (y * TokenUtil.UP);
-            MOVE_ORDER_DEFAULT[TokenUtil.HEIGHT - y - 1] = mask;
+        MOVE_ORDER_DEFAULT = new long[HEIGHT];
+        for (int y = 0; y < HEIGHT; y++) {
+            long mask = X_AXIS << (y * UP);
+            MOVE_ORDER_DEFAULT[HEIGHT - y - 1] = mask;
         }
 
-        if (TokenUtil.CENTER_COLUMN != 0) {
+        if (CENTER_COLUMN != 0) {
             //fill center column first since it keeps symmetry (low branching)
-            MOVE_ORDER_SYMMETRICAL = new long[TokenUtil.HEIGHT + 1];
-            MOVE_ORDER_SYMMETRICAL[0] = TokenUtil.CENTER_COLUMN;
-            for (int y = 0; y < TokenUtil.HEIGHT; y++) {
-                MOVE_ORDER_SYMMETRICAL[y + 1] = MOVE_ORDER_DEFAULT[y] & TokenUtil.LEFT_SIDE;
+            MOVE_ORDER_SYMMETRICAL = new long[HEIGHT + 1];
+            MOVE_ORDER_SYMMETRICAL[0] = CENTER_COLUMN;
+            for (int y = 0; y < HEIGHT; y++) {
+                MOVE_ORDER_SYMMETRICAL[y + 1] = MOVE_ORDER_DEFAULT[y] & LEFT_SIDE;//skip right side
             }
         } else {
-            MOVE_ORDER_SYMMETRICAL = new long[TokenUtil.HEIGHT];
-            for (int y = 0; y < TokenUtil.HEIGHT; y++) {
-                MOVE_ORDER_SYMMETRICAL[y] = MOVE_ORDER_DEFAULT[y] & TokenUtil.LEFT_SIDE;
+            MOVE_ORDER_SYMMETRICAL = new long[HEIGHT];
+            for (int y = 0; y < HEIGHT; y++) {
+                MOVE_ORDER_SYMMETRICAL[y] = MOVE_ORDER_DEFAULT[y] & LEFT_SIDE;//skip right side
             }
         }
     }
@@ -48,40 +48,48 @@ public class TokenSolver {
         TokenSolver solver = new TokenSolver(new SolverTable(28));
         long ownTokens = 0;
         long opponentTokens = 0;
-        System.out.println(TokenUtil.toString(ownTokens, opponentTokens));
+        System.out.println(toString(ownTokens, opponentTokens));
         System.out.println("Solution is: " + solver.solve(ownTokens, opponentTokens));
         System.out.println(solver.totalNodes + " nodes in " + Util.humanReadableNanos(solver.totalNanos) + " (" + (1_000_000 * solver.totalNodes / solver.totalNanos) + "knps)");
-        System.out.println(Arrays.toString(solver.ttStats));
-        System.out.println("cut draw+: " + solver.drawWinCutoff);
-        System.out.println("cut draw-: " + solver.drawLossCutoff);
+        System.out.println();
         solver.table.printStats();
+        String[] scoreNames = {"empty", "win", "draw", "loss", "draw+", "draw-"};
+        for (int i = 0; i < 6; i++) {
+            System.out.println(scoreNames[i] + " loads: " + solver.ttStats[i]);
+        }
+        System.out.println("draw+ cuts: " + solver.drawWinCutoff);
+        System.out.println("draw- cuts: " + solver.drawLossCutoff);
     }
 
     public int solve(long ownTokens, long opponentTokens) {
-        totalNanos -= System.nanoTime();
+        Arrays.fill(ttStats, 0);
+        drawWinCutoff = 0;
+        drawLossCutoff = 0;
+        totalNodes = 0;
+        totalNanos = -System.nanoTime();
         int score = solve(ownTokens, opponentTokens, LOSS_SCORE, WIN_SCORE);
         totalNanos += System.nanoTime();
         return score;
     }
 
     private int solve(long ownTokens, long opponentTokens, int alpha, int beta) {
-        assert !TokenUtil.isWin(opponentTokens);
+        assert !isWin(opponentTokens);
         totalNodes++;
-        if (TokenUtil.isBoardFull(ownTokens, opponentTokens)) {
+        if (isBoardFull(ownTokens, opponentTokens)) {
             return DRAW_SCORE;
         }
-        long moves = TokenUtil.generateMoves(ownTokens, opponentTokens);
+        long moves = generateMoves(ownTokens, opponentTokens);
         if (canWin(ownTokens, moves)) {
             return WIN_SCORE;
         }
 
         long forcedMove = findAnyWinningMove(opponentTokens, moves);
         if (forcedMove != 0) {
-            return -solve(opponentTokens, TokenUtil.move(ownTokens, forcedMove), -beta, -alpha);
+            return -solve(opponentTokens, move(ownTokens, forcedMove), -beta, -alpha);
         }
 
         boolean useTT = (Long.bitCount(ownTokens | opponentTokens) & 1) != 0;
-        long id = useTT ? TokenUtil.hash(ownTokens, opponentTokens) : 0;
+        long id = useTT ? hash(ownTokens, opponentTokens) : 0;
         int entryScore = useTT ? table.load(id) : SolverTable.UNKNOWN_SCORE;
         if (useTT) {
             ttStats[entryScore]++;
@@ -115,12 +123,12 @@ public class TokenSolver {
 
         int nextEntryScore = alpha == LOSS_SCORE ? SolverTable.LOSS_SCORE : SolverTable.DRAW_LOSS_SCORE;
         try {
-            boolean symmetrical = TokenUtil.isSymmetrical(ownTokens) && TokenUtil.isSymmetrical(opponentTokens);
-            for (long orderMask : symmetrical? MOVE_ORDER_SYMMETRICAL: MOVE_ORDER_DEFAULT) {
+            boolean symmetrical = isSymmetrical(ownTokens) && isSymmetrical(opponentTokens);
+            for (long orderMask : symmetrical ? MOVE_ORDER_SYMMETRICAL : MOVE_ORDER_DEFAULT) {
                 long movesIterator = moves & orderMask;
                 while (movesIterator != 0) {
                     long move = Long.lowestOneBit(movesIterator);
-                    int score = -solve(opponentTokens, TokenUtil.move(ownTokens, move), -beta, -alpha);
+                    int score = -solve(opponentTokens, move(ownTokens, move), -beta, -alpha);
                     if (score > alpha) {
                         if (score >= beta) {
                             nextEntryScore = score == WIN_SCORE ? SolverTable.WIN_SCORE : SolverTable.DRAW_WIN_SCORE;
@@ -132,51 +140,12 @@ public class TokenSolver {
                     movesIterator ^= move;
                 }
             }
-
             return alpha;
         } finally {
             if (useTT && entryScore != nextEntryScore) {
                 table.store(id, nextEntryScore);
             }
         }
-    }
-
-    private boolean canWin(long tokens, long moves) {
-        for (long pattern : TokenUtil.WIN_CHECK_PATTERNS) {
-            long patternMoves = moves & pattern;
-            if (patternMoves != 0 && TokenUtil.isWin(TokenUtil.move(tokens, patternMoves))) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    public long findAnyWinningMove(long tokens, long moves) {
-        long squished = TokenUtil.squish(TokenUtil.move(tokens, moves), TokenUtil.UP);
-        if (squished != 0) {
-            return Long.lowestOneBit(TokenUtil.stretch(squished, TokenUtil.UP) & moves);
-        }
-        for (long pattern : TokenUtil.WIN_CHECK_PATTERNS) {
-            long patternMoves = moves & pattern;
-            if (patternMoves != 0) {
-                long moved = TokenUtil.move(tokens, patternMoves);
-                squished = TokenUtil.squish(moved, TokenUtil.RIGHT);
-                if (squished != 0) {
-                    return Long.lowestOneBit(TokenUtil.stretch(squished, TokenUtil.RIGHT) & moves);
-                }
-
-                squished = TokenUtil.squish(moved, TokenUtil.RIGHT_DOWN);
-                if (squished != 0) {
-                    return Long.lowestOneBit(TokenUtil.stretch(squished, TokenUtil.RIGHT_DOWN) & moves);
-                }
-
-                squished = TokenUtil.squish(moved, TokenUtil.RIGHT_UP);
-                if (squished != 0) {
-                    return Long.lowestOneBit(TokenUtil.stretch(squished, TokenUtil.RIGHT_UP) & moves);
-                }
-            }
-        }
-        return 0;
     }
 
 }
