@@ -72,6 +72,7 @@ public class TokenSolver extends TokenUtil {
                 //there are multiple forced moves which can't all be played
                 return LOSS_SCORE;
             }
+            // search forced move, skip TT
             return -solve(opponentTokens, move(ownTokens, forcedMove), -beta, -alpha);
         }
         moves &= ~losingSquares;//losing moves won't improve alpha and can be skipped
@@ -80,7 +81,8 @@ public class TokenSolver extends TokenUtil {
                 if (isBoardFull(ownTokens, opponentTokens)) {
                     return DRAW_SCORE;
                 }
-                return LOSS_SCORE;//all moves are losing and were skipped
+                //all moves are losing and were skipped
+                return LOSS_SCORE;
             }
             //only 1 move, skip TT
             return -solve(opponentTokens, move(ownTokens, moves), -beta, -alpha);
