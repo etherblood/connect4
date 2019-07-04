@@ -121,13 +121,12 @@ public class TokenSolver extends TokenUtil {
             switch (entryScore) {
                 case SolverTable.UNKNOWN_SCORE:
                     break;
-                case SolverTable.DRAW_LOSS_SCORE:
-                    if (DRAW_SCORE <= alpha) {
-                        drawLossCutoff++;
-                        return DRAW_SCORE;
-                    }
-                    beta = DRAW_SCORE;
-                    break;
+                case SolverTable.WIN_SCORE:
+                    return WIN_SCORE;
+                case SolverTable.DRAW_SCORE:
+                    return DRAW_SCORE;
+                case SolverTable.LOSS_SCORE:
+                    return LOSS_SCORE;
                 case SolverTable.DRAW_WIN_SCORE:
                     if (DRAW_SCORE >= beta) {
                         drawWinCutoff++;
@@ -135,12 +134,13 @@ public class TokenSolver extends TokenUtil {
                     }
                     alpha = DRAW_SCORE;
                     break;
-                case SolverTable.DRAW_SCORE:
-                    return DRAW_SCORE;
-                case SolverTable.WIN_SCORE:
-                    return WIN_SCORE;
-                case SolverTable.LOSS_SCORE:
-                    return LOSS_SCORE;
+                case SolverTable.DRAW_LOSS_SCORE:
+                    if (DRAW_SCORE <= alpha) {
+                        drawLossCutoff++;
+                        return DRAW_SCORE;
+                    }
+                    beta = DRAW_SCORE;
+                    break;
                 default:
                     throw new AssertionError();
             }
