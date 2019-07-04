@@ -39,7 +39,7 @@ public class Util {
         public static int toMask(int value) {
             return toFlag(value) - 1;
         }
-        
+
         public static int ceilDiv(int x, int y) {
             return -Math.floorDiv(-x, y);
         }

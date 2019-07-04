@@ -37,7 +37,7 @@ public class TokenPerft {
     private static long positiveDepthPerft(long ownTokens, long opponentTokens, int depth) {
         assert depth > 0;
         if (isWin(opponentTokens)) {
-            return 1;
+            return 0;
         }
         long moves = generateMoves(ownTokens, opponentTokens);
         if (depth == 1) {
