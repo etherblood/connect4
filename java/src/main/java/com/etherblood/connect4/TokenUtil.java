@@ -1,15 +1,19 @@
 package com.etherblood.connect4;
 
 import static com.etherblood.connect4.Util.Long.toMask;
+import java.security.SecureRandom;
+import java.util.Random;
 
 public class TokenUtil {
 
+    private static final Long ZOBRIST_SEED = null;
     private static final long GOLDEN_MULTIPLIER = 0x9e3779b97f4a7c15L;
     public static final int WIDTH, HEIGHT, BUFFERED_HEIGHT;
     public static final long X_AXIS, Y_AXIS, FULL_BOARD, LEFT_SIDE, CENTER_COLUMN;
     public static final int RIGHT, RIGHT_DOWN, RIGHT_UP, UP;
 
     public static final long[] WIN_CHECK_PATTERNS;
+    public static final long[] ZOBRIST_HASHES;
 
     static {
         WIDTH = 7;
@@ -35,6 +39,21 @@ public class TokenUtil {
                 WIN_CHECK_PATTERNS[(x + 2 * y) & 3] |= Util.Long.toFlag(index(x, y));
             }
         }
+
+        Random random;
+        if (ZOBRIST_SEED != null) {
+            random = new Random(ZOBRIST_SEED);
+        } else {
+            random = new SecureRandom();
+        }
+        ZOBRIST_HASHES = new long[WIDTH * BUFFERED_HEIGHT];
+        for (int i = 0; i < ZOBRIST_HASHES.length; i++) {
+            ZOBRIST_HASHES[i] = random.nextLong();
+        }
+    }
+
+    public static long hashMove(long hash, long move) {
+        return Long.rotateLeft(hash, Long.SIZE / 2) ^ ZOBRIST_HASHES[Long.numberOfTrailingZeros(move)];
     }
 
     public static boolean isSymmetrical(long tokens) {

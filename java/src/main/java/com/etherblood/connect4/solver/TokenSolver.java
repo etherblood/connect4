@@ -49,12 +49,12 @@ public class TokenSolver extends TokenUtil {
         drawLossCutoff = 0;
         totalNodes = 0;
         totalNanos = -System.nanoTime();
-        int score = solve(ownTokens, opponentTokens, LOSS_SCORE, WIN_SCORE);
+        int score = solve(ownTokens, opponentTokens, LOSS_SCORE, WIN_SCORE, 0);
         totalNanos += System.nanoTime();
         return score;
     }
 
-    private int solve(long ownTokens, long opponentTokens, int alpha, int beta) {
+    private int solve(long ownTokens, long opponentTokens, int alpha, int beta, long hash) {
         totalNodes++;
         long moves = generateMoves(ownTokens, opponentTokens);
         assert !isWin(opponentTokens);
@@ -73,7 +73,7 @@ public class TokenSolver extends TokenUtil {
                 return LOSS_SCORE;
             }
             // search forced move, skip TT
-            return -solve(opponentTokens, move(ownTokens, forcedMove), -beta, -alpha);
+            return -solve(opponentTokens, move(ownTokens, forcedMove), -beta, -alpha, hashMove(hash, forcedMove));
         }
         moves &= ~losingSquares;//losing moves won't improve alpha and can be skipped
         if (moves == Long.lowestOneBit(moves)) {
@@ -85,12 +85,11 @@ public class TokenSolver extends TokenUtil {
                 return LOSS_SCORE;
             }
             //only 1 move, skip TT
-            return -solve(opponentTokens, move(ownTokens, moves), -beta, -alpha);
+            return -solve(opponentTokens, move(ownTokens, moves), -beta, -alpha, hashMove(hash, moves));
         }
 
-        boolean useTT = (Long.bitCount(occupied(ownTokens, opponentTokens)) & 1) != 0;
-        long id = useTT ? hash(ownTokens, opponentTokens) : 0;
-        int entryScore = useTT ? table.load(id) : SolverTable.UNKNOWN_SCORE;
+        boolean useTT = (Long.bitCount(occupied(ownTokens, opponentTokens)) & 1) == 0;
+        int entryScore = useTT ? table.load(hash) : SolverTable.UNKNOWN_SCORE;
         if (useTT) {
             if (TT_STATS_ENABLED) {
                 ttStats[entryScore]++;
@@ -137,7 +136,7 @@ public class TokenSolver extends TokenUtil {
                 }
                 while (movesIterator != 0) {
                     long move = Long.lowestOneBit(movesIterator);
-                    int score = -solve(opponentTokens, move(ownTokens, move), -beta, -alpha);
+                    int score = -solve(opponentTokens, move(ownTokens, move), -beta, -alpha, hashMove(hash, move));
                     if (score > alpha) {
                         if (score >= beta) {
                             nextEntryScore = score == WIN_SCORE ? SolverTable.WIN_SCORE : SolverTable.DRAW_WIN_SCORE;
@@ -152,7 +151,7 @@ public class TokenSolver extends TokenUtil {
             return alpha;
         } finally {
             if (useTT && entryScore != nextEntryScore) {
-                table.store(id, nextEntryScore);
+                table.store(hash, nextEntryScore);
             }
         }
     }
