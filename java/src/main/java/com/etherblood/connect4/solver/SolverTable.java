@@ -58,6 +58,7 @@ public class SolverTable {
 
     public void printStats() {
         System.out.println("TT-stats");
+        System.out.println(" size: " + data.length);
         System.out.println(" hits: " + hits);
         System.out.println(" misses: " + misses);
         System.out.println(" overwrites: " + overwrites);

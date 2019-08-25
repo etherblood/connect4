@@ -2,11 +2,13 @@ package com.etherblood.connect4.solver;
 
 import com.etherblood.connect4.TokenUtil;
 import com.etherblood.connect4.Util;
+import java.time.Instant;
 import java.util.Arrays;
 
 public class TokenSolver extends TokenUtil {
 
     private static final boolean TT_STATS_ENABLED = false;
+    private static final boolean FOLLOW_UP_STRATEGY_TEST_ENABLED = true;
 
     private static final int WIN_SCORE = 1;
     private static final int DRAW_SCORE = 0;
@@ -25,6 +27,7 @@ public class TokenSolver extends TokenUtil {
         TokenSolver solver = new TokenSolver(new SolverTable(28));
         long ownTokens = 0;
         long opponentTokens = 0;
+        System.out.println(Instant.now());
         System.out.println(toString(ownTokens, opponentTokens));
         System.out.println("Solution is: " + solver.solve(ownTokens, opponentTokens));
         System.out.println(solver.totalNodes + " nodes in " + Util.humanReadableNanos(solver.totalNanos) + " (" + (1_000_000 * solver.totalNodes / solver.totalNanos) + "knps)");
@@ -75,6 +78,7 @@ public class TokenSolver extends TokenUtil {
             // search forced move, skip TT
             return -solve(opponentTokens, move(ownTokens, forcedMove), -beta, -alpha);
         }
+        long losingMoves = losingSquares & moves;
         moves &= ~losingSquares;//losing moves won't improve alpha and can be skipped
         if (moves == Long.lowestOneBit(moves)) {
             if (moves == 0) {
@@ -86,6 +90,22 @@ public class TokenSolver extends TokenUtil {
             }
             //only 1 move, skip TT
             return -solve(opponentTokens, move(ownTokens, moves), -beta, -alpha);
+        }
+        if (FOLLOW_UP_STRATEGY_TEST_ENABLED && IS_HEIGHT_EVEN && Long.bitCount(moves & ODD_INDEX_ROWS) == 1 && (losingMoves & ODD_INDEX_ROWS) == 0) {
+            //test whether follow up strategy ensures at least a draw
+            if ((opponentThreats & EVEN_INDEX_ROWS) == 0) {
+                long opponentEvenFill = opponentTokens | (~ownTokens & EVEN_INDEX_ROWS);
+                if (!isNonVerticalWin(opponentEvenFill)) {
+                    if (beta <= DRAW_SCORE) {
+                        return DRAW_SCORE;
+                    }
+                    long ownOddFill = ownTokens | (~opponentTokens & ODD_INDEX_ROWS);
+                    if (isNonVerticalWin(ownOddFill)) {
+                        return WIN_SCORE;
+                    }
+                    alpha = DRAW_SCORE;
+                }
+            }
         }
 
         boolean useTT = (Long.bitCount(occupied(ownTokens, opponentTokens)) & 1) != 0;
@@ -133,7 +153,7 @@ public class TokenSolver extends TokenUtil {
                     //mirrored moves will have identical scores and can be skipped
                     moves &= LEFT_SIDE;
                 } else {
-                    movesIterator = moves & (X_AXIS << (phase * UP));
+                    movesIterator = moves & (ROW_0 << (phase * UP));
                 }
                 while (movesIterator != 0) {
                     long move = Long.lowestOneBit(movesIterator);
