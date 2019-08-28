@@ -9,6 +9,7 @@ public class TokenSolver extends TokenUtil {
 
     private static final boolean TT_STATS_ENABLED = false;
     private static final boolean FOLLOW_UP_STRATEGY_TEST_ENABLED = true;
+    private static final boolean NO_WINS_REMAINING_TEST_ENABLED = true;
 
     private static final int WIN_SCORE = 1;
     private static final int DRAW_SCORE = 0;
@@ -78,7 +79,6 @@ public class TokenSolver extends TokenUtil {
             // search forced move, skip TT
             return -solve(opponentTokens, move(ownTokens, forcedMove), -beta, -alpha);
         }
-        long losingMoves = losingSquares & moves;
         moves &= ~losingSquares;//losing moves won't improve alpha and can be skipped
         if (moves == Long.lowestOneBit(moves)) {
             if (moves == 0) {
@@ -91,7 +91,7 @@ public class TokenSolver extends TokenUtil {
             //only 1 move, skip TT
             return -solve(opponentTokens, move(ownTokens, moves), -beta, -alpha);
         }
-        if (FOLLOW_UP_STRATEGY_TEST_ENABLED && IS_HEIGHT_EVEN && Long.bitCount(moves & ODD_INDEX_ROWS) == 1 && (losingMoves & ODD_INDEX_ROWS) == 0) {
+        if (FOLLOW_UP_STRATEGY_TEST_ENABLED && IS_HEIGHT_EVEN && Long.bitCount(moves & ODD_INDEX_ROWS) == 1) {
             //test whether follow up strategy ensures at least a draw
             if ((opponentThreats & EVEN_INDEX_ROWS) == 0) {
                 long opponentEvenFill = opponentTokens | (~ownTokens & EVEN_INDEX_ROWS);
@@ -104,6 +104,17 @@ public class TokenSolver extends TokenUtil {
                         return WIN_SCORE;
                     }
                     alpha = DRAW_SCORE;
+                }
+            }
+        }
+        if (NO_WINS_REMAINING_TEST_ENABLED && beta > DRAW_SCORE) {
+            if (opponentThreats == 0) {
+                if (!isNonVerticalWin(~opponentTokens & FULL_BOARD)) {
+                    //can't win anymore
+                    if (alpha >= DRAW_SCORE) {
+                        return DRAW_SCORE;
+                    }
+                    beta = DRAW_SCORE;
                 }
             }
         }
