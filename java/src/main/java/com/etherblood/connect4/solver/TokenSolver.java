@@ -165,7 +165,6 @@ public class TokenSolver extends TokenUtil {
 			long movesIterator = moves;
 			while (movesIterator != 0) {
 				long move = findBestMove(movesIterator);
-				movesIterator ^= move;
 				int score = -solve(opponentTokens, move(ownTokens, move), -beta, -alpha);
 				if (score > alpha) {
 					if (score >= beta) {
@@ -176,6 +175,7 @@ public class TokenSolver extends TokenUtil {
 					alpha = score;
 					nextEntryScore = DRAW_SCORE;
 				}
+				movesIterator ^= move;
 			}
 			return alpha;
 		} finally {
