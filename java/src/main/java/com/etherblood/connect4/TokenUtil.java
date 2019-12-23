@@ -130,37 +130,27 @@ public class TokenUtil {
         }
         return 0;
     }
-
+    
     public static long threats(long ownTokens, long opponentTokens) {
-        long free = FULL_BOARD ^ occupied(ownTokens, opponentTokens);
+        long free = unoccupied(ownTokens, opponentTokens);
 
-        long result = 0;
-        long squished = TokenUtil.squish(TokenUtil.move(ownTokens, generateMoves(ownTokens, opponentTokens)), TokenUtil.UP);
-        if (squished != 0) {
-            result |= TokenUtil.stretch(squished, TokenUtil.UP) & free;
-        }
+        long squishedUp = TokenUtil.squish(TokenUtil.move(ownTokens, generateMoves(ownTokens, opponentTokens)), TokenUtil.UP);
+        long squishedRight = 0, squishedRightDown = 0, squishedRightUp = 0;
         for (long pattern : TokenUtil.WIN_CHECK_PATTERNS) {
             long candidates = free & pattern;
             if (candidates != 0) {
                 long freePattern = TokenUtil.move(ownTokens, candidates);
-                squished = TokenUtil.squish(freePattern, TokenUtil.RIGHT);
-                if (squished != 0) {
-                    result |= TokenUtil.stretch(squished, TokenUtil.RIGHT) & free;
-                }
-
-                squished = TokenUtil.squish(freePattern, TokenUtil.RIGHT_DOWN);
-                if (squished != 0) {
-                    result |= TokenUtil.stretch(squished, TokenUtil.RIGHT_DOWN) & free;
-                }
-
-                squished = TokenUtil.squish(freePattern, TokenUtil.RIGHT_UP);
-                if (squished != 0) {
-                    result |= TokenUtil.stretch(squished, TokenUtil.RIGHT_UP) & free;
-                }
+                squishedRight = TokenUtil.squish(freePattern, TokenUtil.RIGHT);
+                squishedRightDown = TokenUtil.squish(freePattern, TokenUtil.RIGHT_DOWN);
+                squishedRightUp = TokenUtil.squish(freePattern, TokenUtil.RIGHT_UP);
             }
-        }
-        return result;
-    }
+		}
+		return (TokenUtil.stretch(squishedUp, TokenUtil.UP)
+				| TokenUtil.stretch(squishedRight, TokenUtil.RIGHT)
+				| TokenUtil.stretch(squishedRightDown, TokenUtil.RIGHT_DOWN)
+				| TokenUtil.stretch(squishedRightUp, TokenUtil.RIGHT_UP))
+				& free;
+	}
 
     public static long squish(long tokens, int directionShift) {
         tokens &= tokens << (2 * directionShift);
@@ -182,7 +172,7 @@ public class TokenUtil {
         return ownTokens | opponentTokens;
     }
 
-    public static long free(long ownTokens, long opponentTokens) {
+    public static long unoccupied(long ownTokens, long opponentTokens) {
         return FULL_BOARD ^ occupied(ownTokens, opponentTokens);
     }
 
