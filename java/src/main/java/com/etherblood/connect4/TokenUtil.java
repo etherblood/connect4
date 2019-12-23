@@ -140,9 +140,9 @@ public class TokenUtil {
             long candidates = free & pattern;
             if (candidates != 0) {
                 long freePattern = TokenUtil.move(ownTokens, candidates);
-                squishedRight = TokenUtil.squish(freePattern, TokenUtil.RIGHT);
-                squishedRightDown = TokenUtil.squish(freePattern, TokenUtil.RIGHT_DOWN);
-                squishedRightUp = TokenUtil.squish(freePattern, TokenUtil.RIGHT_UP);
+                squishedRight |= TokenUtil.squish(freePattern, TokenUtil.RIGHT);
+                squishedRightDown |= TokenUtil.squish(freePattern, TokenUtil.RIGHT_DOWN);
+                squishedRightUp |= TokenUtil.squish(freePattern, TokenUtil.RIGHT_UP);
             }
 		}
 		return (TokenUtil.stretch(squishedUp, TokenUtil.UP)
