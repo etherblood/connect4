@@ -172,8 +172,8 @@ public class TokenUtil {
         return FULL_BOARD ^ occupied(ownTokens, opponentTokens);
     }
 
-    public static long hash(long ownTokens, long opponentTokens) {
-        return GOLDEN_MULTIPLIER * id(ownTokens, opponentTokens);
+    public static long hash(long id) {
+        return GOLDEN_MULTIPLIER * id;
     }
 
     public static long id(long ownTokens, long opponentTokens) {

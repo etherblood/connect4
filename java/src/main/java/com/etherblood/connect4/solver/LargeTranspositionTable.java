@@ -36,7 +36,7 @@ public class LargeTranspositionTable implements TranspositionTable {
     }
 
     @Override
-    public void store(long hash, int score) {
+    public void store(long hash, int work, int score) {
         stores++;
         int index = index(hash);
         if (data[index] != 0) {

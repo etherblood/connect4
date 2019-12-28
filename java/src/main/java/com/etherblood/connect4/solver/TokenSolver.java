@@ -16,6 +16,7 @@ public class TokenSolver extends TokenUtil {
     private static final int DRAW_SCORE = 0;
     private static final int LOSS_SCORE = -1;
 
+    private long stores;
     public long[] ttStats = new long[6];
     public long drawLossCutoff, drawWinCutoff;
     public long totalNodes, totalNanos;
@@ -58,6 +59,7 @@ public class TokenSolver extends TokenUtil {
             return WIN_SCORE;
         }
         Arrays.fill(ttStats, 0);
+        stores = 0;
         drawWinCutoff = 0;
         drawLossCutoff = 0;
         totalNodes = 0;
@@ -91,15 +93,6 @@ public class TokenSolver extends TokenUtil {
             // search forced move, skip TT
             return -solve(opponentTokens, move(ownTokens, forcedMove), -beta, -alpha);
         }
-        moves &= ~losingSquares;// losing moves won't improve alpha and can be skipped
-        if (moves == Long.lowestOneBit(moves)) {
-            if (moves == 0) {
-                // all moves are losing and were skipped
-                return LOSS_SCORE;
-            }
-            // only 1 move, skip TT
-            return -solve(opponentTokens, move(ownTokens, moves), -beta, -alpha);
-        }
         if (FOLLOW_UP_STRATEGY_TEST_ENABLED && IS_HEIGHT_EVEN && Long.bitCount(moves & ODD_INDEX_ROWS) == 1) {
             // test whether follow up strategy ensures at least a draw
             if ((opponentThreats & EVEN_INDEX_ROWS) == 0) {
@@ -127,20 +120,27 @@ public class TokenSolver extends TokenUtil {
                 }
             }
         }
-        if (SYMMETRY_TEST_ENABLED) {
-            boolean symmetrical = isSymmetrical(ownTokens) && isSymmetrical(opponentTokens);
-            if (symmetrical) {
-                moves &= TokenUtil.LEFT_SIDE | TokenUtil.CENTER_COLUMN;
-                if (Long.bitCount(moves) == 1) {
-                    return -solve(opponentTokens, move(ownTokens, moves), -beta, -alpha);
-                }
+        long id = TokenUtil.id(ownTokens, opponentTokens);
+        long mirroredId = TokenUtil.mirror(id);
+        // losing moves won't improve alpha and can be pruned
+        long prunedMoves = moves & ~losingSquares;
+        if (SYMMETRY_TEST_ENABLED && id == mirroredId) {
+            // symmetric moves won't improve over their counterpart and can be pruned
+            prunedMoves &= TokenUtil.LEFT_SIDE | TokenUtil.CENTER_COLUMN;
+        }
+        if (prunedMoves == Long.lowestOneBit(prunedMoves)) {
+            if (prunedMoves == 0) {
+                // all moves are losing and were skipped
+                return LOSS_SCORE;
             }
+            // only 1 move, skip TT
+            return -solve(opponentTokens, move(ownTokens, prunedMoves), -beta, -alpha);
         }
 
         int player = Long.bitCount(occupied(ownTokens, opponentTokens)) & 1;
         TranspositionTable table = player != 0 ? oddTable : evenTable;
-        long id = hash(ownTokens, opponentTokens);
-        int entryScore = table.load(id);
+        long hash = hash(Math.min(id, mirroredId));
+        int entryScore = table.load(hash);
         if (TT_STATS_ENABLED) {
             ttStats[entryScore]++;
         }
@@ -171,16 +171,17 @@ public class TokenSolver extends TokenUtil {
                 throw new AssertionError();
         }
 
+        long startStores = stores;
         int nextEntryScore = alpha == LOSS_SCORE ? TranspositionTable.LOSS_SCORE : TranspositionTable.DRAW_LOSS_SCORE;
         try {
-            long movesIterator = moves;
+            long movesIterator = prunedMoves;
             while (movesIterator != 0) {
                 long move = findBestHistoryMove(movesIterator);
                 int score = -solve(opponentTokens, move(ownTokens, move), -beta, -alpha);
                 if (score > alpha) {
                     if (score >= beta) {
                         nextEntryScore = score == WIN_SCORE ? TranspositionTable.WIN_SCORE : TranspositionTable.DRAW_WIN_SCORE;
-                        updateHistory(moves ^ movesIterator, move);
+                        updateHistory(prunedMoves ^ movesIterator, move);
                         return score;
                     }
                     alpha = score;
@@ -191,7 +192,8 @@ public class TokenSolver extends TokenUtil {
             return alpha;
         } finally {
             if (entryScore != nextEntryScore) {
-                table.store(id, nextEntryScore);
+                table.store(hash, ceilLog(stores - startStores), nextEntryScore);
+                stores++;
             }
         }
     }
@@ -218,6 +220,14 @@ public class TokenSolver extends TokenUtil {
             history[Long.numberOfTrailingZeros(weakMoves)]--;
             weakMoves &= weakMoves - 1;
         }
+    }
+
+    private static int floorLog(long mask) {
+        return 63 - Long.numberOfLeadingZeros(mask);
+    }
+
+    private static int ceilLog(long mask) {
+        return 64 - Long.numberOfLeadingZeros(mask - 1);
     }
 
 }
