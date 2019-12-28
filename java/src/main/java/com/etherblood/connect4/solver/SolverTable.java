@@ -12,7 +12,8 @@ public class SolverTable {
     public static final int DRAW_LOSS_SCORE = 5;
 
     private static final int SCORE_BITS = 3;
-    private static final int ID_MASK = ~0 << SCORE_BITS;
+    private static final int SCORE_MASK = toMask(SCORE_BITS);
+    private static final int ID_MASK = ~SCORE_MASK;
 
     private final int[] data;
     private final int mask;
@@ -34,7 +35,7 @@ public class SolverTable {
         int rawEntry = data[index];
         if (((rawEntry ^ (int)hash) & ID_MASK) == 0) {
             hits++;
-            return rawEntry & toMask(SCORE_BITS);
+            return rawEntry & SCORE_MASK;
         }
         misses++;
         return UNKNOWN_SCORE;
@@ -42,14 +43,11 @@ public class SolverTable {
 
     public void store(long hash, int score) {
         stores++;
-        int values = 0;
-        values |= score & toMask(SCORE_BITS);
-        values |= (int)hash & ID_MASK;
         int index = index(hash);
         if (data[index] != 0) {
             overwrites++;
         }
-        data[index] = values;
+        data[index] = (score & SCORE_MASK) | ((int)hash & ID_MASK);
     }
 
     private int index(long hash) {
@@ -66,7 +64,7 @@ public class SolverTable {
         System.out.println(" stores: " + stores);
         int[] scores = new int[6];
         for (int i = 0; i < data.length; i++) {
-            scores[data[i] & toMask(SCORE_BITS)]++;
+            scores[data[i] & SCORE_MASK]++;
         }
         String[] scoreNames = {"empty", "win", "draw", "loss", "draw+", "draw-"};
         for (int i = 0; i < 6; i++) {
