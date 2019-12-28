@@ -142,7 +142,7 @@ long search(bitboard own, bitboard opp, long alpha, long beta)
 	//loading from TT is very expensive, only doing it at odd depths tested to be faster
 	bool useMainTable = TokenUtil::bitCount(TokenUtil::occupied(own, opp)) & 1;
 	bitboard id = TokenUtil::hash(own, opp);
-	unsigned long entryScore;
+	TranspositionTable::Score entryScore;
 	if (useMainTable)
 	{
 		entryScore = table.load(id);
@@ -160,25 +160,25 @@ long search(bitboard own, bitboard opp, long alpha, long beta)
 			hit++;
 		}
 #else
-		entryScore = TranspositionTable::UNKNOWN_SCORE;
+		entryScore = TranspositionTable::Score::UNKNOWN;
 #endif
 	}
 	switch (entryScore) {
-	case TranspositionTable::UNKNOWN_SCORE:
+	case TranspositionTable::Score::UNKNOWN:
 		break;
-	case TranspositionTable::WIN_SCORE:
+	case TranspositionTable::Score::WIN:
 		return WIN_SCORE;
-	case TranspositionTable::DRAW_SCORE:
+	case TranspositionTable::Score::DRAW:
 		return DRAW_SCORE;
-	case TranspositionTable::LOSS_SCORE:
+	case TranspositionTable::Score::LOSS:
 		return LOSS_SCORE;
-	case TranspositionTable::DRAW_WIN_SCORE:
+	case TranspositionTable::Score::DRAW_WIN:
 		if (DRAW_SCORE >= beta) {
 			return DRAW_SCORE;
 		}
 		alpha = DRAW_SCORE;
 		break;
-	case TranspositionTable::DRAW_LOSS_SCORE:
+	case TranspositionTable::Score::DRAW_LOSS:
 		if (DRAW_SCORE <= alpha) {
 			return DRAW_SCORE;
 		}
@@ -188,7 +188,7 @@ long search(bitboard own, bitboard opp, long alpha, long beta)
 		throw;
 	}
 
-	unsigned long nextEntryScore = alpha == LOSS_SCORE ? TranspositionTable::LOSS_SCORE : TranspositionTable::DRAW_LOSS_SCORE;
+	TranspositionTable::Score nextEntryScore = alpha == LOSS_SCORE ? TranspositionTable::Score::LOSS : TranspositionTable::Score::DRAW_LOSS;
 #endif
 	bitboard movesIterator = moves;
 	while (movesIterator)
@@ -201,7 +201,7 @@ long search(bitboard own, bitboard opp, long alpha, long beta)
 			{
 				updateHistory(moves ^ movesIterator, move);
 #ifdef TRANSPOSITION_TABLE_ENABLED
-				nextEntryScore = score == WIN_SCORE ? TranspositionTable::WIN_SCORE : TranspositionTable::DRAW_WIN_SCORE;
+				nextEntryScore = score == WIN_SCORE ? TranspositionTable::Score::WIN : TranspositionTable::Score::DRAW_WIN;
 				if (entryScore != nextEntryScore)
 				{
 					if (useMainTable)
@@ -219,7 +219,7 @@ long search(bitboard own, bitboard opp, long alpha, long beta)
 				return score;
 			}
 #ifdef TRANSPOSITION_TABLE_ENABLED
-			nextEntryScore = DRAW_SCORE;
+			nextEntryScore = TranspositionTable::Score::DRAW;
 #endif
 			alpha = score;
 		}

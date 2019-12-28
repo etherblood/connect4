@@ -6,20 +6,20 @@ uint32_t SmallTranspositionTable::index(bitboard hash)
 	return (uint32_t)hash & INDEX_MASK;
 }
 
-unsigned long SmallTranspositionTable::load(bitboard hash)
+TranspositionTable::Score SmallTranspositionTable::load(bitboard hash)
 {
 	uint32_t index = SmallTranspositionTable::index(hash);
 	bitboard rawEntry = data[index];
 	bitboard score = rawEntry ^ hash;
 	if (((rawEntry ^ hash) & ID_MASK) == 0)
 	{
-		return rawEntry & SCORE_MASK;
+		return static_cast<TranspositionTable::Score>(rawEntry & SCORE_MASK);
 	}
-	return TranspositionTable::UNKNOWN_SCORE;
+	return TranspositionTable::Score::UNKNOWN;
 }
 
-void SmallTranspositionTable::store(bitboard hash, unsigned long score)
+void SmallTranspositionTable::store(bitboard hash, TranspositionTable::Score score)
 {
 	uint32_t index = SmallTranspositionTable::index(hash);
-	data[index] = (score & SCORE_MASK) | (hash & ID_MASK);
+	data[index] = (static_cast<int>(score) & SCORE_MASK) | (hash & ID_MASK);
 }

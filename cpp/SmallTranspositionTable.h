@@ -6,8 +6,8 @@ using bitboard = unsigned long long;
 class SmallTranspositionTable
 {
 public:
-	unsigned long load(bitboard hash);
-	void store(bitboard hash, unsigned long score);
+    TranspositionTable::Score load(bitboard hash);
+	void store(bitboard hash, TranspositionTable::Score score);
 
 private:
     static const unsigned long SCORE_BITS = 3;

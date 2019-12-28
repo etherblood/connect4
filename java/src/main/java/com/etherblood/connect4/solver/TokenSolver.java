@@ -19,15 +19,16 @@ public class TokenSolver extends TokenUtil {
     public long[] ttStats = new long[6];
     public long drawLossCutoff, drawWinCutoff;
     public long totalNodes, totalNanos;
-    public final SolverTable table;
+    public final TranspositionTable evenTable, oddTable;
     private final int[] history = new int[TokenUtil.WIDTH * TokenUtil.BUFFERED_HEIGHT - 1];
 
-    public TokenSolver(SolverTable table) {
-        this.table = table;
+    public TokenSolver(TranspositionTable oddTable, TranspositionTable evenTable) {
+        this.oddTable = oddTable;
+        this.evenTable = evenTable;
     }
 
     public static void main(String[] args) {
-        TokenSolver solver = new TokenSolver(new SolverTable(28));
+        TokenSolver solver = new TokenSolver(new LargeTranspositionTable(28), new SmallTranspositionTable(10));
         long ownTokens = 0;
         long opponentTokens = 0;
         System.out.println(Instant.now());
@@ -36,7 +37,12 @@ public class TokenSolver extends TokenUtil {
         System.out.println(solver.totalNodes + " nodes in " + Util.humanReadableNanos(solver.totalNanos) + " ("
                 + (1_000_000 * solver.totalNodes / solver.totalNanos) + "knps)");
         System.out.println();
-        solver.table.printStats();
+        System.out.println("Odd table:");
+        solver.oddTable.printStats();
+        System.out.println();
+        System.out.println("Even table:");
+        solver.evenTable.printStats();
+        System.out.println();
         if (TT_STATS_ENABLED) {
             String[] scoreNames = {"empty", "win", "draw", "loss", "draw+", "draw-"};
             for (int i = 0; i < 6; i++) {
@@ -131,42 +137,41 @@ public class TokenSolver extends TokenUtil {
             }
         }
 
-        boolean useTT = (Long.bitCount(occupied(ownTokens, opponentTokens)) & 1) != 0;
-        long id = useTT ? hash(ownTokens, opponentTokens) : 0;
-        int entryScore = useTT ? table.load(id) : SolverTable.UNKNOWN_SCORE;
-        if (useTT) {
-            if (TT_STATS_ENABLED) {
-                ttStats[entryScore]++;
-            }
-            switch (entryScore) {
-                case SolverTable.UNKNOWN_SCORE:
-                    break;
-                case SolverTable.WIN_SCORE:
-                    return WIN_SCORE;
-                case SolverTable.DRAW_SCORE:
+        int player = Long.bitCount(occupied(ownTokens, opponentTokens)) & 1;
+        TranspositionTable table = player != 0 ? oddTable : evenTable;
+        long id = hash(ownTokens, opponentTokens);
+        int entryScore = table.load(id);
+        if (TT_STATS_ENABLED) {
+            ttStats[entryScore]++;
+        }
+        switch (entryScore) {
+            case TranspositionTable.UNKNOWN_SCORE:
+                break;
+            case TranspositionTable.WIN_SCORE:
+                return WIN_SCORE;
+            case TranspositionTable.DRAW_SCORE:
+                return DRAW_SCORE;
+            case TranspositionTable.LOSS_SCORE:
+                return LOSS_SCORE;
+            case TranspositionTable.DRAW_WIN_SCORE:
+                if (DRAW_SCORE >= beta) {
+                    drawWinCutoff++;
                     return DRAW_SCORE;
-                case SolverTable.LOSS_SCORE:
-                    return LOSS_SCORE;
-                case SolverTable.DRAW_WIN_SCORE:
-                    if (DRAW_SCORE >= beta) {
-                        drawWinCutoff++;
-                        return DRAW_SCORE;
-                    }
-                    alpha = DRAW_SCORE;
-                    break;
-                case SolverTable.DRAW_LOSS_SCORE:
-                    if (DRAW_SCORE <= alpha) {
-                        drawLossCutoff++;
-                        return DRAW_SCORE;
-                    }
-                    beta = DRAW_SCORE;
-                    break;
-                default:
-                    throw new AssertionError();
-            }
+                }
+                alpha = DRAW_SCORE;
+                break;
+            case TranspositionTable.DRAW_LOSS_SCORE:
+                if (DRAW_SCORE <= alpha) {
+                    drawLossCutoff++;
+                    return DRAW_SCORE;
+                }
+                beta = DRAW_SCORE;
+                break;
+            default:
+                throw new AssertionError();
         }
 
-        int nextEntryScore = alpha == LOSS_SCORE ? SolverTable.LOSS_SCORE : SolverTable.DRAW_LOSS_SCORE;
+        int nextEntryScore = alpha == LOSS_SCORE ? TranspositionTable.LOSS_SCORE : TranspositionTable.DRAW_LOSS_SCORE;
         try {
             long movesIterator = moves;
             while (movesIterator != 0) {
@@ -174,18 +179,18 @@ public class TokenSolver extends TokenUtil {
                 int score = -solve(opponentTokens, move(ownTokens, move), -beta, -alpha);
                 if (score > alpha) {
                     if (score >= beta) {
-                        nextEntryScore = score == WIN_SCORE ? SolverTable.WIN_SCORE : SolverTable.DRAW_WIN_SCORE;
+                        nextEntryScore = score == WIN_SCORE ? TranspositionTable.WIN_SCORE : TranspositionTable.DRAW_WIN_SCORE;
                         updateHistory(moves ^ movesIterator, move);
                         return score;
                     }
                     alpha = score;
-                    nextEntryScore = DRAW_SCORE;
+                    nextEntryScore = TranspositionTable.DRAW_SCORE;
                 }
                 movesIterator ^= move;
             }
             return alpha;
         } finally {
-            if (useTT && entryScore != nextEntryScore) {
+            if (entryScore != nextEntryScore) {
                 table.store(id, nextEntryScore);
             }
         }

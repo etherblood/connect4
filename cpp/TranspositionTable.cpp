@@ -8,20 +8,20 @@ uint32_t TranspositionTable::index(bitboard hash)
 	return upperHash & INDEX_MASK;
 }
 
-unsigned long TranspositionTable::load(bitboard hash)
+TranspositionTable::Score TranspositionTable::load(bitboard hash)
 {
 	uint32_t index = TranspositionTable::index(hash);
 	uint32_t rawEntry = data[index];
 	if (((rawEntry ^ (uint32_t)hash) & ID_MASK) == 0) {
-		return rawEntry & SCORE_MASK;
+		return static_cast<TranspositionTable::Score>(rawEntry & SCORE_MASK);
 	}
-	return UNKNOWN_SCORE;
+	return TranspositionTable::Score::UNKNOWN;
 }
 
-void TranspositionTable::store(bitboard hash, unsigned long score)
+void TranspositionTable::store(bitboard hash, Score score)
 {
 	uint32_t index = TranspositionTable::index(hash);
-	data[index] = (((uint32_t)score & SCORE_MASK) | ((uint32_t)hash & ID_MASK));
+	data[index] = ((static_cast<int>(score) & SCORE_MASK) | ((uint32_t)hash & ID_MASK));
 }
 
 void TranspositionTable::prefetch(bitboard hash)
