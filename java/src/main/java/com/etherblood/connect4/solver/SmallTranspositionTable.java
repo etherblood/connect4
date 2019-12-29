@@ -1,11 +1,11 @@
 package com.etherblood.connect4.solver;
 
-import static com.etherblood.connect4.Util.Int.toMask;
+import com.etherblood.connect4.Util;
 
 public class SmallTranspositionTable implements TranspositionTable {
 
     private static final int SCORE_BITS = 3;
-    private static final long SCORE_MASK = toMask(SCORE_BITS);
+    private static final long SCORE_MASK = Util.toLongMask(SCORE_BITS);
     private static final long ID_MASK = ~SCORE_MASK;
 
     private final long[] data;
@@ -14,7 +14,7 @@ public class SmallTranspositionTable implements TranspositionTable {
 
     public SmallTranspositionTable(int sizeBase) {
         data = new long[1 << sizeBase];
-        indexMask = toMask(sizeBase);
+        indexMask = Util.toIntMask(sizeBase);
         hits = 0;
         misses = 0;
         overwrites = 0;
@@ -36,7 +36,7 @@ public class SmallTranspositionTable implements TranspositionTable {
     }
 
     @Override
-    public void store(long hash, int work, int score) {
+    public void store(long hash, int score) {
         stores++;
         int index = index(hash);
         if (data[index] != 0) {

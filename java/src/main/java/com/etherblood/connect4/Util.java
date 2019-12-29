@@ -18,31 +18,31 @@ public class Util {
         return nanos + ("nµm".charAt(count) + "") + "s";
     }
 
-    public static class Long {
-
-        public static long toFlag(int value) {
-            return 1L << value;
-        }
-
-        public static long toMask(int value) {
-            return toFlag(value) - 1;
-        }
-
+    public static long toLongFlag(int value) {
+        return 1L << value;
     }
 
-    public static class Int {
+    public static long toLongMask(int value) {
+        return toLongFlag(value) - 1;
+    }
 
-        public static int toFlag(int value) {
-            return 1 << value;
-        }
+    public static int toIntFlag(int value) {
+        return 1 << value;
+    }
 
-        public static int toMask(int value) {
-            return toFlag(value) - 1;
-        }
+    public static int toIntMask(int value) {
+        return toIntFlag(value) - 1;
+    }
 
-        public static int ceilDiv(int x, int y) {
-            return -Math.floorDiv(-x, y);
-        }
+    public static int ceilDiv(int x, int y) {
+        return -Math.floorDiv(-x, y);
+    }
 
+    public static int floorLog(long mask) {
+        return 63 - Long.numberOfLeadingZeros(mask);
+    }
+
+    public static int ceilLog(long mask) {
+        return 64 - Long.numberOfLeadingZeros(mask - 1);
     }
 }

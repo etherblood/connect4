@@ -14,6 +14,6 @@ public interface TranspositionTable {
     static final int DRAW_LOSS_SCORE = 5;
     
     int load(long hash);
-    void store(long hash, int work, int score);
+    void store(long hash, int score);
     void printStats();
 }

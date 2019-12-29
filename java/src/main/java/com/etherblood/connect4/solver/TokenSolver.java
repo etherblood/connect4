@@ -16,7 +16,6 @@ public class TokenSolver extends TokenUtil {
     private static final int DRAW_SCORE = 0;
     private static final int LOSS_SCORE = -1;
 
-    private long stores;
     public long[] ttStats = new long[6];
     public long drawLossCutoff, drawWinCutoff;
     public long totalNodes, totalNanos;
@@ -59,7 +58,6 @@ public class TokenSolver extends TokenUtil {
             return WIN_SCORE;
         }
         Arrays.fill(ttStats, 0);
-        stores = 0;
         drawWinCutoff = 0;
         drawLossCutoff = 0;
         totalNodes = 0;
@@ -171,7 +169,6 @@ public class TokenSolver extends TokenUtil {
                 throw new AssertionError();
         }
 
-        long startStores = stores;
         int nextEntryScore = alpha == LOSS_SCORE ? TranspositionTable.LOSS_SCORE : TranspositionTable.DRAW_LOSS_SCORE;
         try {
             long movesIterator = prunedMoves;
@@ -192,8 +189,7 @@ public class TokenSolver extends TokenUtil {
             return alpha;
         } finally {
             if (entryScore != nextEntryScore) {
-                table.store(hash, ceilLog(stores - startStores), nextEntryScore);
-                stores++;
+                table.store(hash, nextEntryScore);
             }
         }
     }
@@ -204,7 +200,7 @@ public class TokenSolver extends TokenUtil {
         while (moves != 0) {
             int index = Long.numberOfTrailingZeros(moves);
             int nextScore = history[index];
-            long nextMove = Util.Long.toFlag(index);
+            long nextMove = Util.toLongFlag(index);
             moves ^= nextMove;
             if (nextScore > bestScore) {
                 bestMove = nextMove;
@@ -220,14 +216,6 @@ public class TokenSolver extends TokenUtil {
             history[Long.numberOfTrailingZeros(weakMoves)]--;
             weakMoves &= weakMoves - 1;
         }
-    }
-
-    private static int floorLog(long mask) {
-        return 63 - Long.numberOfLeadingZeros(mask);
-    }
-
-    private static int ceilLog(long mask) {
-        return 64 - Long.numberOfLeadingZeros(mask - 1);
     }
 
 }

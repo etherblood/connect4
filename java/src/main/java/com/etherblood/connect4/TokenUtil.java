@@ -1,7 +1,5 @@
 package com.etherblood.connect4;
 
-import static com.etherblood.connect4.Util.Long.toMask;
-
 public class TokenUtil {
 
     private static final long GOLDEN_MULTIPLIER = 0x9e3779b97f4a7c15L;
@@ -10,7 +8,7 @@ public class TokenUtil {
     public static final long FULL_BOARD, LEFT_SIDE, CENTER_COLUMN;
     public static final long EVEN_INDEX_ROWS, ODD_INDEX_ROWS;
     public static final int RIGHT, RIGHT_DOWN, RIGHT_UP, UP;
-    public static final boolean IS_HEIGHT_EVEN;
+    public static final boolean IS_HEIGHT_EVEN, ARE_COLUMNS_BYTE_ALIGNED;
 
     public static final long[] WIN_CHECK_PATTERNS;
 
@@ -18,45 +16,38 @@ public class TokenUtil {
         WIDTH = 7;
         HEIGHT = 6;
 
-        BUFFERED_HEIGHT = HEIGHT + 1;
+        ARE_COLUMNS_BYTE_ALIGNED = HEIGHT < Byte.SIZE && WIDTH <= Long.BYTES;
+        BUFFERED_HEIGHT = ARE_COLUMNS_BYTE_ALIGNED ? Byte.SIZE : HEIGHT + 1;
         if (WIDTH * BUFFERED_HEIGHT > Long.SIZE) {
             throw new IllegalArgumentException();
         }
         IS_HEIGHT_EVEN = (HEIGHT & 1) == 0;
-        COLUMN_0 = toMask(HEIGHT);
-        BUFFERED_COLUMN_0 = toMask(BUFFERED_HEIGHT);
-        ROW_0 = toMask(WIDTH * BUFFERED_HEIGHT) / toMask(BUFFERED_HEIGHT);
+        COLUMN_0 = Util.toLongMask(HEIGHT);
+        BUFFERED_COLUMN_0 = Util.toLongMask(BUFFERED_HEIGHT);
+        ROW_0 = Util.toLongMask(WIDTH * BUFFERED_HEIGHT) / Util.toLongMask(BUFFERED_HEIGHT);
         UP = 1;
         RIGHT = BUFFERED_HEIGHT;
         RIGHT_UP = RIGHT + UP;
         RIGHT_DOWN = RIGHT - UP;
         FULL_BOARD = ROW_0 * COLUMN_0;
-        LEFT_SIDE = FULL_BOARD >>> (Util.Int.ceilDiv(WIDTH, 2) * RIGHT);
+        LEFT_SIDE = FULL_BOARD >>> (Util.ceilDiv(WIDTH, 2) * RIGHT);
         CENTER_COLUMN = (WIDTH & 1) != 0 ? COLUMN_0 << (WIDTH / 2 * RIGHT) : 0;
 
         EVEN_INDEX_ROWS = (COLUMN_0 / 3) * ROW_0;
-        ODD_INDEX_ROWS = (BUFFERED_COLUMN_0 / 3) * ROW_0;
+        ODD_INDEX_ROWS = FULL_BOARD ^ EVEN_INDEX_ROWS;
 
         WIN_CHECK_PATTERNS = new long[4];
         for (int y = 0; y < HEIGHT; y++) {
             for (int x = 0; x < WIDTH; x++) {
-                WIN_CHECK_PATTERNS[(x + 2 * y) & 3] |= Util.Long.toFlag(index(x, y));
+                WIN_CHECK_PATTERNS[(x + 2 * y) & 3] |= Util.toLongFlag(index(x, y));
             }
         }
-    }
-
-    public static boolean isSymmetrical(long tokens) {
-        for (int x = 0; x < WIDTH / 2; x++) {
-            long left = tokens >>> (x * RIGHT);
-            long right = tokens >>> ((WIDTH - x - 1) * RIGHT);
-            if (((left ^ right) & COLUMN_0) != 0) {
-                return false;
-            }
-        }
-        return true;
     }
 
     public static long mirror(long tokens) {
+        if (ARE_COLUMNS_BYTE_ALIGNED) {
+            return Long.reverseBytes(tokens) >>> (RIGHT * (8 - WIDTH));
+        }
         long result = tokens & CENTER_COLUMN;
         for (int x = 0; x < WIDTH / 2; x++) {
             int mirrorX = WIDTH - x - 1;
@@ -81,10 +72,7 @@ public class TokenUtil {
     }
 
     public static boolean isWin(long tokens) {
-        return squish(tokens, RIGHT_UP) != 0
-                || squish(tokens, RIGHT_DOWN) != 0
-                || squish(tokens, RIGHT) != 0
-                || squish(tokens, UP) != 0;
+        return isNonVerticalWin(tokens) || squish(tokens, UP) != 0;
     }
 
     public static boolean isNonVerticalWin(long tokens) {
@@ -94,13 +82,7 @@ public class TokenUtil {
     }
 
     public static boolean canWin(long tokens, long moves) {
-        for (long pattern : WIN_CHECK_PATTERNS) {
-            long patternMoves = moves & pattern;
-            if (patternMoves != 0 && isWin(move(tokens, patternMoves))) {
-                return true;
-            }
-        }
-        return false;
+        return findAnyWinningMove(tokens, moves) != 0;
     }
 
     public static long findAnyWinningMove(long tokens, long moves) {
@@ -194,9 +176,9 @@ public class TokenUtil {
         StringBuilder builder = new StringBuilder();
         for (int y = HEIGHT - 1; y >= 0; y--) {
             for (int x = 0; x < WIDTH; x++) {
-                if ((Util.Long.toFlag(index(x, y)) & ownTokens) != 0) {
+                if ((Util.toLongFlag(index(x, y)) & ownTokens) != 0) {
                     builder.append("[x]");
-                } else if ((Util.Long.toFlag(index(x, y)) & opponentTokens) != 0) {
+                } else if ((Util.toLongFlag(index(x, y)) & opponentTokens) != 0) {
                     builder.append("[o]");
                 } else {
                     builder.append("[ ]");
