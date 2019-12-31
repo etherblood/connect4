@@ -17,7 +17,7 @@ public class TokenSolver extends TokenUtil {
     private static final int LOSS_SCORE = -1;
 
     public long[] ttStats = new long[6];
-    public long drawLossCutoff, drawWinCutoff;
+    public long drawCutoff, lossCutoff, winCutoff, drawLossCutoff, drawWinCutoff;
     public long totalNodes, totalNanos;
     public final TranspositionTable evenTable, oddTable;
     private final int[] history = new int[TokenUtil.WIDTH * TokenUtil.BUFFERED_HEIGHT - 1];
@@ -28,7 +28,16 @@ public class TokenSolver extends TokenUtil {
     }
 
     public static void main(String[] args) {
-        TokenSolver solver = new TokenSolver(new LargeTranspositionTable(28), new SmallTranspositionTable(10));
+        //table sizes chosen carefully as pseudo seeds, they seem to perform well for 7x6
+        TokenSolver solver = new TokenSolver(new TranspositionTableImpl(1073741717L), new TranspositionTableImpl(1073741651L));
+        for (int i = 0; i < 1; i++) {
+            solve(solver);
+            solver.oddTable.clear();
+            solver.evenTable.clear();
+        }
+    }
+
+    private static void solve(TokenSolver solver) {
         long ownTokens = 0;
         long opponentTokens = 0;
         System.out.println(Instant.now());
@@ -49,14 +58,18 @@ public class TokenSolver extends TokenUtil {
                 System.out.println(scoreNames[i] + " loads: " + solver.ttStats[i]);
             }
         }
+        System.out.println("win cuts: " + solver.winCutoff);
+        System.out.println("loss cuts: " + solver.lossCutoff);
+        System.out.println("draw cuts: " + solver.drawCutoff);
         System.out.println("draw+ cuts: " + solver.drawWinCutoff);
         System.out.println("draw- cuts: " + solver.drawLossCutoff);
     }
 
     public int solve(long ownTokens, long opponentTokens) {
-        if (canWin(ownTokens, generateMoves(ownTokens, opponentTokens))) {
+        if (canWin(ownTokens, opponentTokens)) {
             return WIN_SCORE;
         }
+        resetHistory();
         Arrays.fill(ttStats, 0);
         drawWinCutoff = 0;
         drawLossCutoff = 0;
@@ -67,11 +80,24 @@ public class TokenSolver extends TokenUtil {
         return score;
     }
 
+    private void resetHistory() {
+        for (int x = 0; x < TokenUtil.WIDTH; x++) {
+            for (int y = 0; y < TokenUtil.HEIGHT; y++) {
+                int index = TokenUtil.index(x, y);
+                history[index] = ((2 * y) - Math.abs((WIDTH - 1) - 2 * x) + (WIDTH - 1)) / 2;
+            }
+        }
+        int sum = Arrays.stream(history, 0, history.length / 2).sum();
+        for (int i = 0; i < history.length; i++) {
+            history[i] -= sum / (WIDTH * HEIGHT);
+        }
+    }
+
     private int solve(long ownTokens, long opponentTokens, int alpha, int beta) {
         totalNodes++;
         long moves = generateMoves(ownTokens, opponentTokens);
         assert !isWin(opponentTokens);
-        assert !canWin(ownTokens, moves);
+        assert !canWin(ownTokens, opponentTokens);
         if (moves == 0) {
             return DRAW_SCORE;
         }
@@ -137,8 +163,8 @@ public class TokenSolver extends TokenUtil {
 
         int player = Long.bitCount(occupied(ownTokens, opponentTokens)) & 1;
         TranspositionTable table = player != 0 ? oddTable : evenTable;
-        long hash = hash(Math.min(id, mirroredId));
-        int entryScore = table.load(hash);
+        long symmetricId = Math.min(id, mirroredId);
+        int entryScore = table.load(symmetricId);
         if (TT_STATS_ENABLED) {
             ttStats[entryScore]++;
         }
@@ -146,10 +172,13 @@ public class TokenSolver extends TokenUtil {
             case TranspositionTable.UNKNOWN_SCORE:
                 break;
             case TranspositionTable.WIN_SCORE:
+                winCutoff++;
                 return WIN_SCORE;
             case TranspositionTable.DRAW_SCORE:
+                drawCutoff++;
                 return DRAW_SCORE;
             case TranspositionTable.LOSS_SCORE:
+                lossCutoff++;
                 return LOSS_SCORE;
             case TranspositionTable.DRAW_WIN_SCORE:
                 if (DRAW_SCORE >= beta) {
@@ -166,7 +195,7 @@ public class TokenSolver extends TokenUtil {
                 beta = DRAW_SCORE;
                 break;
             default:
-                throw new AssertionError();
+                throw new AssertionError(Integer.toString(entryScore));
         }
 
         int nextEntryScore = alpha == LOSS_SCORE ? TranspositionTable.LOSS_SCORE : TranspositionTable.DRAW_LOSS_SCORE;
@@ -189,7 +218,7 @@ public class TokenSolver extends TokenUtil {
             return alpha;
         } finally {
             if (entryScore != nextEntryScore) {
-                table.store(hash, nextEntryScore);
+                table.store(symmetricId, nextEntryScore);
             }
         }
     }

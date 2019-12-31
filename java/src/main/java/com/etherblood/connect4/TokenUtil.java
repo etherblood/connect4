@@ -2,7 +2,8 @@ package com.etherblood.connect4;
 
 public class TokenUtil {
 
-    private static final long GOLDEN_MULTIPLIER = 0x9e3779b97f4a7c15L;
+    private static final boolean FORCE_BYTE_ALIGNED_COLUMNS;
+
     public static final int WIDTH, HEIGHT, BUFFERED_HEIGHT;
     public static final long ROW_0, COLUMN_0, BUFFERED_COLUMN_0;
     public static final long FULL_BOARD, LEFT_SIDE, CENTER_COLUMN;
@@ -13,11 +14,17 @@ public class TokenUtil {
     public static final long[] WIN_CHECK_PATTERNS;
 
     static {
+        //custom settings
+        FORCE_BYTE_ALIGNED_COLUMNS = false;
         WIDTH = 7;
         HEIGHT = 6;
 
-        ARE_COLUMNS_BYTE_ALIGNED = HEIGHT < Byte.SIZE && WIDTH <= Long.BYTES;
-        BUFFERED_HEIGHT = ARE_COLUMNS_BYTE_ALIGNED ? Byte.SIZE : HEIGHT + 1;
+        //computed settings
+        if (FORCE_BYTE_ALIGNED_COLUMNS && (HEIGHT >= Byte.SIZE || WIDTH > Long.BYTES)) {
+            throw new IllegalStateException("Cannot force byte aligned columns for dimensions " + WIDTH + " x " + HEIGHT + ".");
+        }
+        BUFFERED_HEIGHT = FORCE_BYTE_ALIGNED_COLUMNS ? Byte.SIZE : HEIGHT + 1;
+        ARE_COLUMNS_BYTE_ALIGNED = BUFFERED_HEIGHT == Byte.SIZE;
         if (WIDTH * BUFFERED_HEIGHT > Long.SIZE) {
             throw new IllegalArgumentException();
         }
@@ -46,7 +53,7 @@ public class TokenUtil {
 
     public static long mirror(long tokens) {
         if (ARE_COLUMNS_BYTE_ALIGNED) {
-            return Long.reverseBytes(tokens) >>> (RIGHT * (8 - WIDTH));
+            return Long.reverseBytes(tokens) >>> (RIGHT * (Long.BYTES - WIDTH));
         }
         long result = tokens & CENTER_COLUMN;
         for (int x = 0; x < WIDTH / 2; x++) {
@@ -81,36 +88,8 @@ public class TokenUtil {
                 || squish(tokens, RIGHT_UP) != 0;
     }
 
-    public static boolean canWin(long tokens, long moves) {
-        return findAnyWinningMove(tokens, moves) != 0;
-    }
-
-    public static long findAnyWinningMove(long tokens, long moves) {
-        long squished = squish(move(tokens, moves), UP);
-        if (squished != 0) {
-            return Long.lowestOneBit(stretch(squished, UP) & moves);
-        }
-        for (long pattern : WIN_CHECK_PATTERNS) {
-            long patternMoves = moves & pattern;
-            if (patternMoves != 0) {
-                long moved = move(tokens, patternMoves);
-                squished = squish(moved, RIGHT);
-                if (squished != 0) {
-                    return Long.lowestOneBit(stretch(squished, RIGHT) & moves);
-                }
-
-                squished = squish(moved, RIGHT_DOWN);
-                if (squished != 0) {
-                    return Long.lowestOneBit(stretch(squished, RIGHT_DOWN) & moves);
-                }
-
-                squished = squish(moved, RIGHT_UP);
-                if (squished != 0) {
-                    return Long.lowestOneBit(stretch(squished, RIGHT_UP) & moves);
-                }
-            }
-        }
-        return 0;
+    public static boolean canWin(long ownTokens, long opponentTokens) {
+        return (threats(ownTokens, opponentTokens) & generateMoves(ownTokens, opponentTokens)) != 0;
     }
 
     public static long threats(long ownTokens, long opponentTokens) {
@@ -131,14 +110,14 @@ public class TokenUtil {
     }
 
     public static long squish(long tokens, int directionShift) {
-        tokens &= tokens << (2 * directionShift);
-        tokens &= tokens << directionShift;
+        tokens &= tokens >>> (2 * directionShift);
+        tokens &= tokens >>> directionShift;
         return tokens;
     }
 
     public static long stretch(long tokens, int directionShift) {
-        tokens |= tokens >>> (2 * directionShift);
-        tokens |= tokens >>> directionShift;
+        tokens |= tokens << (2 * directionShift);
+        tokens |= tokens << directionShift;
         return tokens;
     }
 
@@ -152,10 +131,6 @@ public class TokenUtil {
 
     public static long unoccupied(long ownTokens, long opponentTokens) {
         return FULL_BOARD ^ occupied(ownTokens, opponentTokens);
-    }
-
-    public static long hash(long id) {
-        return GOLDEN_MULTIPLIER * id;
     }
 
     public static long id(long ownTokens, long opponentTokens) {
@@ -191,7 +166,22 @@ public class TokenUtil {
         return builder.toString();
     }
 
+    public static String toString(int[] board, int offset) {
+        StringBuilder builder = new StringBuilder();
+        for (int y = HEIGHT - 1; y >= 0; y--) {
+            for (int x = 0; x < WIDTH; x++) {
+                builder.append("[");
+                builder.append(board[offset + index(x, y)]);
+                builder.append("]");
+            }
+            if (y != 0) {
+                builder.append('\n');
+            }
+        }
+        return builder.toString();
+    }
+
     public static int index(int x, int y) {
-        return x * BUFFERED_HEIGHT + y;
+        return x * RIGHT + y;
     }
 }
