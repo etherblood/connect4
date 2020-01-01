@@ -60,7 +60,6 @@ public class TranspositionTableImpl implements TranspositionTable {
 
     @Override
     public void printStats() {
-        System.out.println("TT-stats");
         System.out.println(" size: " + table.length);
         System.out.println(" hits: " + hits);
         System.out.println(" misses: " + misses);

@@ -4,10 +4,11 @@ import com.etherblood.connect4.TokenUtil;
 import com.etherblood.connect4.Util;
 import java.time.Instant;
 import java.util.Arrays;
+import java.util.stream.Collectors;
 
 public class TokenSolver extends TokenUtil {
 
-    private static final boolean TT_STATS_ENABLED = false;
+    private static final boolean ARRAY_STATS_ENABLED = true;
     private static final boolean FOLLOW_UP_STRATEGY_TEST_ENABLED = true;
     private static final boolean NO_WINS_REMAINING_TEST_ENABLED = true;
     private static final boolean SYMMETRY_TEST_ENABLED = true;
@@ -17,10 +18,11 @@ public class TokenSolver extends TokenUtil {
     private static final int LOSS_SCORE = -1;
 
     public long[] ttStats = new long[6];
-    public long drawCutoff, lossCutoff, winCutoff, drawLossCutoff, drawWinCutoff;
-    public long totalNodes, totalNanos;
+    public long drawCutoff, lossCutoff, winCutoff, drawLossCutoff, drawWinCutoff, drawLossLoads, drawWinLoads;
+    public long totalNodes, totalNanos, alphaNodes, betaNodes;
     public final TranspositionTable evenTable, oddTable;
     private final int[] history = new int[TokenUtil.WIDTH * TokenUtil.BUFFERED_HEIGHT - 1];
+    private final int[] historyUpdates = new int[WIDTH];
 
     public TokenSolver(TranspositionTable oddTable, TranspositionTable evenTable) {
         this.oddTable = oddTable;
@@ -46,23 +48,33 @@ public class TokenSolver extends TokenUtil {
         System.out.println(solver.totalNodes + " nodes in " + Util.humanReadableNanos(solver.totalNanos) + " ("
                 + (1_000_000 * solver.totalNodes / solver.totalNanos) + "knps)");
         System.out.println();
+        System.out.println("alpha nodes: " + solver.alphaNodes);
+        System.out.println("beta nodes: " + solver.betaNodes);
+        System.out.println("history updates: " + Arrays.toString(solver.historyUpdates));
+        System.out.println("history updates%: " + Arrays.stream(solver.historyUpdates).mapToDouble(x -> (double) x / solver.betaNodes).mapToObj(x -> toPercentage(x, 2)).collect(Collectors.joining(", ", "[", "]")));
+        System.out.println();
         System.out.println("Odd table:");
         solver.oddTable.printStats();
         System.out.println();
         System.out.println("Even table:");
         solver.evenTable.printStats();
         System.out.println();
-        if (TT_STATS_ENABLED) {
+        if (ARRAY_STATS_ENABLED) {
             String[] scoreNames = {"empty", "win", "draw", "loss", "draw+", "draw-"};
             for (int i = 0; i < 6; i++) {
                 System.out.println(scoreNames[i] + " loads: " + solver.ttStats[i]);
             }
+            System.out.println();
         }
         System.out.println("win cuts: " + solver.winCutoff);
         System.out.println("loss cuts: " + solver.lossCutoff);
         System.out.println("draw cuts: " + solver.drawCutoff);
         System.out.println("draw+ cuts: " + solver.drawWinCutoff);
         System.out.println("draw- cuts: " + solver.drawLossCutoff);
+    }
+
+    private static String toPercentage(double n, int digits) {
+        return String.format("%." + digits + "f", n * 100) + "%";
     }
 
     public int solve(long ownTokens, long opponentTokens) {
@@ -73,6 +85,11 @@ public class TokenSolver extends TokenUtil {
         Arrays.fill(ttStats, 0);
         drawWinCutoff = 0;
         drawLossCutoff = 0;
+        drawCutoff = 0;
+        winCutoff = 0;
+        lossCutoff = 0;
+        alphaNodes = 0;
+        betaNodes = 0;
         totalNodes = 0;
         totalNanos = -System.nanoTime();
         int score = solve(ownTokens, opponentTokens, LOSS_SCORE, WIN_SCORE);
@@ -81,15 +98,12 @@ public class TokenSolver extends TokenUtil {
     }
 
     private void resetHistory() {
+        Arrays.fill(historyUpdates, 0);
         for (int x = 0; x < TokenUtil.WIDTH; x++) {
             for (int y = 0; y < TokenUtil.HEIGHT; y++) {
                 int index = TokenUtil.index(x, y);
                 history[index] = ((2 * y) - Math.abs((WIDTH - 1) - 2 * x) + (WIDTH - 1)) / 2;
             }
-        }
-        int sum = Arrays.stream(history, 0, history.length / 2).sum();
-        for (int i = 0; i < history.length; i++) {
-            history[i] -= sum / (WIDTH * HEIGHT);
         }
     }
 
@@ -165,7 +179,7 @@ public class TokenSolver extends TokenUtil {
         TranspositionTable table = player != 0 ? oddTable : evenTable;
         long symmetricId = Math.min(id, mirroredId);
         int entryScore = table.load(symmetricId);
-        if (TT_STATS_ENABLED) {
+        if (ARRAY_STATS_ENABLED) {
             ttStats[entryScore]++;
         }
         switch (entryScore) {
@@ -208,6 +222,7 @@ public class TokenSolver extends TokenUtil {
                     if (score >= beta) {
                         nextEntryScore = score == WIN_SCORE ? TranspositionTable.WIN_SCORE : TranspositionTable.DRAW_WIN_SCORE;
                         updateHistory(prunedMoves ^ movesIterator, move);
+                        betaNodes++;
                         return score;
                     }
                     alpha = score;
@@ -215,6 +230,7 @@ public class TokenSolver extends TokenUtil {
                 }
                 movesIterator ^= move;
             }
+            alphaNodes++;
             return alpha;
         } finally {
             if (entryScore != nextEntryScore) {
@@ -240,7 +256,11 @@ public class TokenSolver extends TokenUtil {
     }
 
     private void updateHistory(long weakMoves, long goodMove) {
-        history[Long.numberOfTrailingZeros(goodMove)] += Long.bitCount(weakMoves);
+        int weakCount = Long.bitCount(weakMoves);
+        if (ARRAY_STATS_ENABLED) {
+            historyUpdates[weakCount]++;
+        }
+        history[Long.numberOfTrailingZeros(goodMove)] += weakCount;
         while (weakMoves != 0) {
             history[Long.numberOfTrailingZeros(weakMoves)]--;
             weakMoves &= weakMoves - 1;
