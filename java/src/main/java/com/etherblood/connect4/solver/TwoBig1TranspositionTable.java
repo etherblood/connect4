@@ -12,7 +12,7 @@ public class TwoBig1TranspositionTable implements TranspositionTable {
     private static final int VERIFY_MASK = Util.toIntMask(VERIFY_BITS);
 
     private final long[] table;
-    private long hits, misses, overwrites, stores;
+    private long hits, misses, stores;
 
     public TwoBig1TranspositionTable(long size) {
         long prime = PrimeUtil.primeLessOrEqual(size);
@@ -48,24 +48,23 @@ public class TwoBig1TranspositionTable implements TranspositionTable {
     @Override
     public void store(long id, int work, int score) {
         assert (score >>> SCORE_BITS) == 0;
+        assert (work >>> WORK_BITS) == 0;
         stores++;
         long hash = hash(id);
         int index = index(hash);
         long rawEntry = table[index];
         int previousWork = (int) (rawEntry >>> (2 * (VERIFY_BITS + SCORE_BITS)));
-        long newEntry = (((work << SCORE_BITS) | score) << VERIFY_BITS) | ((int) verifier(hash) & VERIFY_MASK);
+        long newEntry = (score << VERIFY_BITS) | (verifier(hash) & VERIFY_MASK);
         if (work >= previousWork) {
             rawEntry >>>= VERIFY_BITS + SCORE_BITS;
             rawEntry &= Util.toLongMask(VERIFY_BITS + SCORE_BITS);
             rawEntry |= newEntry << (VERIFY_BITS + SCORE_BITS);
+            rawEntry |= (long)work << (2 * (VERIFY_BITS + SCORE_BITS));
         } else {
             rawEntry &= ~Util.toLongMask(VERIFY_BITS + SCORE_BITS);
             rawEntry |= newEntry;
         }
-//        if (table[index] != 0) {
-//            overwrites++;
-//        }
-        table[index] = rawEntry;//(score << VERIFY_BITS) | ((int) verifier(hash) & VERIFY_MASK);
+        table[index] = rawEntry;
     }
 
     private long hash(long id) {
@@ -82,22 +81,29 @@ public class TwoBig1TranspositionTable implements TranspositionTable {
 
     @Override
     public void printStats() {
-        System.out.println(" size: " + table.length);
+        int[] scores = new int[6];
+        for (int i = 0; i < table.length; i++) {
+            long raw = table[i];
+            scores[(int) ((raw >>> VERIFY_BITS) & SCORE_MASK)]++;
+            scores[(int) ((raw >>> (2 * VERIFY_BITS + SCORE_BITS)) & SCORE_MASK)]++;
+        }
+
+        int size = 2 * table.length;
+        int full = size - scores[TranspositionTable.UNKNOWN_SCORE];
+        System.out.println(" size: " + size);
         System.out.println(" hits: " + hits);
         System.out.println(" misses: " + misses);
-//        System.out.println(" overwrites: " + overwrites);
+        System.out.println(" overwrites: " + (stores - full));
         System.out.println(" loads: " + (hits + misses));
         System.out.println(" stores: " + stores);
-//        int[] scores = new int[6];
-//        for (int i = 0; i < table.length; i++) {
-//            scores[table[i] >>> VERIFY_BITS]++;
-//        }
-//        String[] scoreNames = {"empty", "win", "draw", "loss", "draw+", "draw-"};
-//        System.out.println("  " + scoreNames[0] + ": " + scores[0]);
-//        System.out.println("  full: " + (table.length - scores[0]));
-//        for (int i = 1; i < 6; i++) {
-//            System.out.println("   " + scoreNames[i] + ": " + scores[i]);
-//        }
+        System.out.println("  " + TranspositionTable.scoreToString(TranspositionTable.UNKNOWN_SCORE) + ": " + scores[TranspositionTable.UNKNOWN_SCORE]);
+        System.out.println("  full: " + (size - scores[TranspositionTable.UNKNOWN_SCORE]));
+        for (int i = 0; i < 6; i++) {
+            if (i == TranspositionTable.UNKNOWN_SCORE) {
+                continue;
+            }
+            System.out.println("   " + TranspositionTable.scoreToString(i) + ": " + scores[i]);
+        }
     }
 
     @Override
@@ -105,7 +111,6 @@ public class TwoBig1TranspositionTable implements TranspositionTable {
         Arrays.fill(table, 0);
         hits = 0;
         misses = 0;
-        overwrites = 0;
         stores = 0;
     }
 }

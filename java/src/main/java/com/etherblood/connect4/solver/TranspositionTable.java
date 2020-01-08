@@ -12,9 +12,31 @@ public interface TranspositionTable {
     static final int LOSS_SCORE = 3;
     static final int DRAW_WIN_SCORE = 4;
     static final int DRAW_LOSS_SCORE = 5;
-    
+
     int load(long id);
+
     void store(long id, int work, int score);
+
     void printStats();
+
     void clear();
+
+    static String scoreToString(int score) {
+        switch (score) {
+            case UNKNOWN_SCORE:
+                return "empty";
+            case WIN_SCORE:
+                return "win";
+            case DRAW_SCORE:
+                return "draw";
+            case LOSS_SCORE:
+                return "loss";
+            case DRAW_WIN_SCORE:
+                return "draw+";
+            case DRAW_LOSS_SCORE:
+                return "draw-";
+            default:
+                throw new AssertionError();
+        }
+    }
 }

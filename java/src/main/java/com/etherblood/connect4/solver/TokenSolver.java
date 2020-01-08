@@ -9,7 +9,7 @@ import java.util.stream.Collectors;
 public class TokenSolver extends TokenUtil {
 
     private static final boolean ARRAY_STATS_ENABLED = true;
-    private static final boolean CHILDS_SHALLOW_SEARCH_ENABLED = false;
+    private static final boolean CHILDS_SHALLOW_SEARCH_ENABLED = true;
     private static final boolean FOLLOW_UP_STRATEGY_TEST_ENABLED = true;
     private static final boolean NO_WINS_REMAINING_TEST_ENABLED = true;
     private static final boolean SYMMETRY_TEST_ENABLED = true;

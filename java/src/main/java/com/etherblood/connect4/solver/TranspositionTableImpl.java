@@ -10,7 +10,7 @@ public class TranspositionTableImpl implements TranspositionTable {
     private static final int VERIFY_MASK = Util.toIntMask(VERIFY_BITS);
 
     private final int[] table;
-    private long hits, misses, overwrites, stores;
+    private long hits, misses, stores;
 
     public TranspositionTableImpl(long size) {
         long prime = PrimeUtil.primeLessOrEqual(size);
@@ -40,9 +40,6 @@ public class TranspositionTableImpl implements TranspositionTable {
         stores++;
         long hash = hash(id);
         int index = index(hash);
-        if (table[index] != 0) {
-            overwrites++;
-        }
         table[index] = (score << VERIFY_BITS) | ((int) verifier(hash) & VERIFY_MASK);
     }
 
@@ -60,21 +57,24 @@ public class TranspositionTableImpl implements TranspositionTable {
 
     @Override
     public void printStats() {
-        System.out.println(" size: " + table.length);
-        System.out.println(" hits: " + hits);
-        System.out.println(" misses: " + misses);
-        System.out.println(" overwrites: " + overwrites);
-        System.out.println(" loads: " + (hits + misses));
-        System.out.println(" stores: " + stores);
         int[] scores = new int[6];
         for (int i = 0; i < table.length; i++) {
             scores[table[i] >>> VERIFY_BITS]++;
         }
-        String[] scoreNames = {"empty", "win", "draw", "loss", "draw+", "draw-"};
-        System.out.println("  " + scoreNames[0] + ": " + scores[0]);
-        System.out.println("  full: " + (table.length - scores[0]));
-        for (int i = 1; i < 6; i++) {
-            System.out.println("   " + scoreNames[i] + ": " + scores[i]);
+        int full = table.length - scores[TranspositionTable.UNKNOWN_SCORE];
+        System.out.println(" size: " + table.length);
+        System.out.println(" hits: " + hits);
+        System.out.println(" misses: " + misses);
+        System.out.println(" overwrites: " + (stores - full));
+        System.out.println(" loads: " + (hits + misses));
+        System.out.println(" stores: " + stores);
+        System.out.println("  " + TranspositionTable.scoreToString(TranspositionTable.UNKNOWN_SCORE) + ": " + scores[TranspositionTable.UNKNOWN_SCORE]);
+        System.out.println("  full: " + (table.length - scores[TranspositionTable.UNKNOWN_SCORE]));
+        for (int i = 0; i < 6; i++) {
+            if (i == TranspositionTable.UNKNOWN_SCORE) {
+                continue;
+            }
+            System.out.println("   " + TranspositionTable.scoreToString(i) + ": " + scores[i]);
         }
     }
 
@@ -83,7 +83,6 @@ public class TranspositionTableImpl implements TranspositionTable {
         Arrays.fill(table, 0);
         hits = 0;
         misses = 0;
-        overwrites = 0;
         stores = 0;
     }
 }
