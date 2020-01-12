@@ -31,22 +31,26 @@ public class TokenPerft {
         if (depth == 0) {
             return 1;
         }
-        return positiveDepthPerft(ownTokens, opponentTokens, depth);
+        if (depth == 1) {
+            return Long.bitCount(generateMoves(ownTokens, opponentTokens));
+        }
+        return fastPerft(ownTokens, opponentTokens, depth);
     }
 
-    private static long positiveDepthPerft(long ownTokens, long opponentTokens, int depth) {
-        assert depth > 0;
-        if (isWin(opponentTokens)) {
-            return 0;
-        }
+    private static long fastPerft(long ownTokens, long opponentTokens, int depth) {
+        assert depth > 1;
         long moves = generateMoves(ownTokens, opponentTokens);
-        if (depth == 1) {
-            return Long.bitCount(moves);
-        }
         long sum = 0;
         while (moves != 0) {
             long move = Long.lowestOneBit(moves);
-            sum += positiveDepthPerft(opponentTokens, move(ownTokens, move), depth - 1);
+            long nextTokens = move(ownTokens, move);
+            if (!isWin(nextTokens)) {
+                if(depth == 2) {
+                    sum += Long.bitCount(generateMoves(opponentTokens, nextTokens));
+                } else {
+                    sum += fastPerft(opponentTokens, nextTokens, depth - 1);
+                }
+            }
             moves ^= move;
         }
         return sum;
