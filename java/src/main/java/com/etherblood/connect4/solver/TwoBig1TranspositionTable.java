@@ -12,21 +12,17 @@ public class TwoBig1TranspositionTable implements TranspositionTable {
     private static final int VERIFY_MASK = Util.toIntMask(VERIFY_BITS);
 
     private final long[] table;
-    private long hits, misses, stores;
+    private long hits, misses, stores, maxVerifier, maxWork;
 
     public TwoBig1TranspositionTable(long size) {
-        long prime = PrimeUtil.primeLessOrEqual(size);
-        if (size != prime) {
-            System.out.println("Automatically adjusted table size from " + size + " to " + prime + " for improved indexing.");
-        }
-        this.table = new long[Math.toIntExact(prime)];
+        this.table = new long[Math.toIntExact(PrimeUtil.primeLessOrEqual(size / 2))];
         clear();
     }
 
     @Override
     public int load(long id) {
         long hash = hash(id);
-        int verifier = (int) (verifier(hash));
+        int verifier = verifier(hash);
         int index = index(hash);
         long rawEntry = table[index];
         int raw1 = (int) (rawEntry);
@@ -49,17 +45,22 @@ public class TwoBig1TranspositionTable implements TranspositionTable {
     public void store(long id, int work, int score) {
         assert (score >>> SCORE_BITS) == 0;
         assert (work >>> WORK_BITS) == 0;
+        maxWork = Math.max(maxWork, work);
         stores++;
         long hash = hash(id);
         int index = index(hash);
         long rawEntry = table[index];
         int previousWork = (int) (rawEntry >>> (2 * (VERIFY_BITS + SCORE_BITS)));
-        long newEntry = (score << VERIFY_BITS) | (verifier(hash) & VERIFY_MASK);
+        int verifier = verifier(hash);
+        if (Long.compareUnsigned(verifier, maxVerifier) > 0) {
+            maxVerifier = verifier;
+        }
+        long newEntry = (score << VERIFY_BITS) | (verifier & VERIFY_MASK);
         if (work >= previousWork) {
             rawEntry >>>= VERIFY_BITS + SCORE_BITS;
             rawEntry &= Util.toLongMask(VERIFY_BITS + SCORE_BITS);
             rawEntry |= newEntry << (VERIFY_BITS + SCORE_BITS);
-            rawEntry |= (long)work << (2 * (VERIFY_BITS + SCORE_BITS));
+            rawEntry |= (long) work << (2 * (VERIFY_BITS + SCORE_BITS));
         } else {
             rawEntry &= ~Util.toLongMask(VERIFY_BITS + SCORE_BITS);
             rawEntry |= newEntry;
@@ -72,11 +73,11 @@ public class TwoBig1TranspositionTable implements TranspositionTable {
     }
 
     private int index(long hash) {
-        return Math.floorMod(hash, table.length);
+        return (int) Long.remainderUnsigned(hash, table.length);
     }
 
-    private long verifier(long hash) {
-        return Math.floorDiv(hash, table.length);
+    private int verifier(long hash) {
+        return (int) Long.divideUnsigned(hash, table.length);
     }
 
     @Override
@@ -90,20 +91,23 @@ public class TwoBig1TranspositionTable implements TranspositionTable {
 
         int size = 2 * table.length;
         int full = size - scores[TranspositionTable.UNKNOWN_SCORE];
-        System.out.println(" size: " + size);
-        System.out.println(" hits: " + hits);
-        System.out.println(" misses: " + misses);
+        System.out.println(" size: " + size + " - " + Util.humanReadableByteCountBin((long) size * Integer.BYTES));
+        System.out.println(" hits: " + hits + " - " + Util.toPercentage(hits, hits + misses, 1));
+        System.out.println(" misses: " + misses + " - " + Util.toPercentage(misses, hits + misses, 1));
         System.out.println(" overwrites: " + (stores - full));
         System.out.println(" loads: " + (hits + misses));
         System.out.println(" stores: " + stores);
-        System.out.println("  " + TranspositionTable.scoreToString(TranspositionTable.UNKNOWN_SCORE) + ": " + scores[TranspositionTable.UNKNOWN_SCORE]);
-        System.out.println("  full: " + (size - scores[TranspositionTable.UNKNOWN_SCORE]));
+        System.out.println("  " + TranspositionTable.scoreToString(TranspositionTable.UNKNOWN_SCORE) + ": " + scores[TranspositionTable.UNKNOWN_SCORE] + " - " + Util.toPercentage(scores[TranspositionTable.UNKNOWN_SCORE], size, 1));
+        System.out.println("  full: " + full + " - " + Util.toPercentage(full, size, 1));
         for (int i = 0; i < 6; i++) {
             if (i == TranspositionTable.UNKNOWN_SCORE) {
                 continue;
             }
-            System.out.println("   " + TranspositionTable.scoreToString(i) + ": " + scores[i]);
+            System.out.println("   " + TranspositionTable.scoreToString(i) + ": " + scores[i] + " - " + Util.toPercentage(scores[i], full, 1));
         }
+        System.out.println(" stores/size: " + 100L * stores / size + "%");
+        System.out.println(" used/available key size: " + maxVerifier + "/" + VERIFY_MASK + " - " + Util.toPercentage(maxVerifier, VERIFY_MASK, 1));
+        System.out.println(" used/available work size: " + maxWork + "/" + Util.toIntMask(WORK_BITS) + " - " + Util.toPercentage(maxWork, Util.toIntMask(WORK_BITS), 1));
     }
 
     @Override
@@ -112,5 +116,6 @@ public class TwoBig1TranspositionTable implements TranspositionTable {
         hits = 0;
         misses = 0;
         stores = 0;
+        maxVerifier = 0;
     }
 }

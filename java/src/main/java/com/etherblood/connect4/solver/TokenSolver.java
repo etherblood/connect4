@@ -6,7 +6,7 @@ import java.time.Instant;
 import java.util.Arrays;
 import java.util.stream.Collectors;
 
-public class TokenSolver extends TokenUtil {
+public class TokenSolver {
 
     private static final boolean ARRAY_STATS_ENABLED = true;
     private static final boolean CHILDS_SHALLOW_SEARCH_ENABLED = true;
@@ -20,17 +20,20 @@ public class TokenSolver extends TokenUtil {
     private static final int REQUIRES_TT_SEARCH = Integer.MIN_VALUE;
     private static final int REQUIRES_NO_TT_SEARCH = Integer.MIN_VALUE + 1;
 
-    public long[] ttStats = new long[6];
-    public long drawCutoff, lossCutoff, winCutoff, drawLossCutoff, drawWinCutoff, drawLossLoads, drawWinLoads;
-    public long totalNodes, totalNanos, alphaNodes, betaNodes, shallowNodes, shallowCutoff;
-    public final TranspositionTable evenTable, oddTable;
-    private final int[] history = new int[TokenUtil.WIDTH * TokenUtil.BUFFERED_HEIGHT - 1];
-    private final int[] historyUpdates = new int[WIDTH];
+    private final long[] ttStats = new long[6];
+    private long drawCutoff, lossCutoff, winCutoff, drawLossCutoff, drawWinCutoff;
+    private long totalNodes, totalNanos, alphaNodes, betaNodes, shallowNodes, shallowCutoff;
+
+    private final TranspositionTable evenTable, oddTable;
+    private final int[] history;
+    private final int[] historyUpdates;
     private long work;
 
     public TokenSolver(TranspositionTable oddTable, TranspositionTable evenTable) {
         this.oddTable = oddTable;
         this.evenTable = evenTable;
+        history = new int[TokenUtil.WIDTH * TokenUtil.BUFFERED_HEIGHT - 1];
+        historyUpdates = new int[TokenUtil.WIDTH];
     }
 
     public static void main(String[] args) {
@@ -48,7 +51,7 @@ public class TokenSolver extends TokenUtil {
         long ownTokens = 0;
         long opponentTokens = 0;
         System.out.println(Instant.now());
-        System.out.println(toString(ownTokens, opponentTokens));
+        System.out.println(TokenUtil.toString(ownTokens, opponentTokens));
         int solution = solver.solve(ownTokens, opponentTokens);
         System.out.println("Solution is: " + Arrays.asList("loss", "draw", "win").get(solution + 1));
         System.out.println(solver.totalNodes + " nodes in " + Util.humanReadableNanos(solver.totalNanos) + " ("
@@ -60,7 +63,7 @@ public class TokenSolver extends TokenUtil {
         System.out.println("beta nodes: " + solver.betaNodes);
         System.out.println("history updates: " + Arrays.toString(solver.historyUpdates));
         double historyUpdatesSum = Arrays.stream(solver.historyUpdates).sum();
-        System.out.println("history updates%: " + Arrays.stream(solver.historyUpdates).mapToDouble(x -> x / historyUpdatesSum).mapToObj(x -> toPercentage(x, 2)).collect(Collectors.joining(", ", "[", "]")));
+        System.out.println("history updates%: " + Arrays.stream(solver.historyUpdates).mapToDouble(x -> x / historyUpdatesSum).mapToObj(x -> Util.toPercentage(x, 2)).collect(Collectors.joining(", ", "[", "]")));
         System.out.println();
         System.out.println("Odd table:");
         solver.oddTable.printStats();
@@ -82,12 +85,8 @@ public class TokenSolver extends TokenUtil {
         System.out.println("draw- cuts: " + solver.drawLossCutoff);
     }
 
-    private static String toPercentage(double n, int digits) {
-        return String.format("%." + digits + "f", n * 100) + "%";
-    }
-
     public int solve(long ownTokens, long opponentTokens) {
-        if (canWin(ownTokens, opponentTokens)) {
+        if (TokenUtil.canWin(ownTokens, opponentTokens)) {
             return WIN_SCORE;
         }
         resetHistory();
@@ -112,7 +111,7 @@ public class TokenSolver extends TokenUtil {
         for (int x = 0; x < TokenUtil.WIDTH; x++) {
             for (int y = 0; y < TokenUtil.HEIGHT; y++) {
                 int index = TokenUtil.index(x, y);
-                history[index] = ((2 * y) - Math.abs((WIDTH - 1) - 2 * x) + (WIDTH - 1)) / 2;
+                history[index] = ((2 * y) - Math.abs((TokenUtil.WIDTH - 1) - 2 * x) + (TokenUtil.WIDTH - 1)) / 2;
             }
         }
     }
@@ -123,15 +122,15 @@ public class TokenSolver extends TokenUtil {
         } else {
             shallowNodes++;
         }
-        long moves = generateMoves(ownTokens, opponentTokens);
-        assert !isWin(opponentTokens);
-        assert !canWin(ownTokens, opponentTokens);
+        long moves = TokenUtil.generateMoves(ownTokens, opponentTokens);
+        assert !TokenUtil.isWin(opponentTokens);
+        assert !TokenUtil.canWin(ownTokens, opponentTokens);
         if (moves == 0) {
             return DRAW_SCORE;
         }
-        long opponentThreats = threats(opponentTokens, ownTokens);
+        long opponentThreats = TokenUtil.threats(opponentTokens, ownTokens);
         long forcedMoves = moves & opponentThreats;
-        long losingSquares = opponentThreats >>> UP;
+        long losingSquares = opponentThreats >>> TokenUtil.UP;
         if (forcedMoves != 0) {
             if ((forcedMoves & losingSquares) != 0) {
                 // forced to play a losing move
@@ -146,18 +145,18 @@ public class TokenSolver extends TokenUtil {
             if (earlyExit) {
                 return -REQUIRES_NO_TT_SEARCH;
             }
-            return -solve(opponentTokens, move(ownTokens, forcedMove), -beta, -alpha, false);
+            return -solve(opponentTokens, TokenUtil.move(ownTokens, forcedMove), -beta, -alpha, false);
         }
-        if (FOLLOW_UP_STRATEGY_TEST_ENABLED && IS_HEIGHT_EVEN && Long.bitCount(moves & ODD_INDEX_ROWS) == 1) {
+        if (FOLLOW_UP_STRATEGY_TEST_ENABLED && TokenUtil.IS_HEIGHT_EVEN && Long.bitCount(moves & TokenUtil.ODD_INDEX_ROWS) == 1) {
             // test whether follow up strategy ensures at least a draw
-            if ((opponentThreats & EVEN_INDEX_ROWS) == 0) {
-                long opponentEvenFill = opponentTokens | (~ownTokens & EVEN_INDEX_ROWS);
-                if (!isNonVerticalWin(opponentEvenFill)) {
+            if ((opponentThreats & TokenUtil.EVEN_INDEX_ROWS) == 0) {
+                long opponentEvenFill = opponentTokens | (~ownTokens & TokenUtil.EVEN_INDEX_ROWS);
+                if (!TokenUtil.isNonVerticalWin(opponentEvenFill)) {
                     if (beta <= DRAW_SCORE) {
                         return DRAW_SCORE;
                     }
-                    long ownOddFill = ownTokens | (~opponentTokens & ODD_INDEX_ROWS);
-                    if (isNonVerticalWin(ownOddFill)) {
+                    long ownOddFill = ownTokens | (~opponentTokens & TokenUtil.ODD_INDEX_ROWS);
+                    if (TokenUtil.isNonVerticalWin(ownOddFill)) {
                         return WIN_SCORE;
                     }
                     alpha = DRAW_SCORE;
@@ -166,7 +165,7 @@ public class TokenSolver extends TokenUtil {
         }
         if (NO_WINS_REMAINING_TEST_ENABLED && beta > DRAW_SCORE) {
             if (opponentThreats == 0) {
-                if (!isNonVerticalWin(~opponentTokens & FULL_BOARD)) {
+                if (!TokenUtil.isNonVerticalWin(~opponentTokens & TokenUtil.FULL_BOARD)) {
                     // can't win anymore
                     if (alpha >= DRAW_SCORE) {
                         return DRAW_SCORE;
@@ -192,10 +191,10 @@ public class TokenSolver extends TokenUtil {
             if (earlyExit) {
                 return -REQUIRES_NO_TT_SEARCH;
             }
-            return -solve(opponentTokens, move(ownTokens, reducedMoves), -beta, -alpha, false);
+            return -solve(opponentTokens, TokenUtil.move(ownTokens, reducedMoves), -beta, -alpha, false);
         }
 
-        int player = Long.bitCount(occupied(ownTokens, opponentTokens)) & 1;
+        int player = Long.bitCount(TokenUtil.occupied(ownTokens, opponentTokens)) & 1;
         TranspositionTable table = player != 0 ? oddTable : evenTable;
         long symmetricId = Math.min(id, mirroredId);
         int entryScore = table.load(symmetricId);
@@ -245,7 +244,7 @@ public class TokenSolver extends TokenUtil {
                     long move = findBestHistoryMove(movesIterator);
                     movesIterator ^= move;
                     int score;
-                    score = -solve(opponentTokens, move(ownTokens, move), -beta, -alpha, true);
+                    score = -solve(opponentTokens, TokenUtil.move(ownTokens, move), -beta, -alpha, true);
                     switch (score) {
                         case REQUIRES_TT_SEARCH:
                         case REQUIRES_NO_TT_SEARCH:
@@ -270,7 +269,7 @@ public class TokenSolver extends TokenUtil {
 
             while (movesIterator != 0) {
                 long move = findBestHistoryMove(movesIterator);
-                int score = -solve(opponentTokens, move(ownTokens, move), -beta, -alpha, false);
+                int score = -solve(opponentTokens, TokenUtil.move(ownTokens, move), -beta, -alpha, false);
                 if (score > alpha) {
                     if (score >= beta) {
                         nextEntryScore = score == WIN_SCORE ? TranspositionTable.WIN_SCORE : TranspositionTable.DRAW_WIN_SCORE;

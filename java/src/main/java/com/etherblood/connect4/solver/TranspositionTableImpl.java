@@ -17,7 +17,7 @@ public class TranspositionTableImpl implements TranspositionTable {
         if (size != prime) {
             System.out.println("WARN: Automatically adjusted table size from " + size + " to " + prime + " for improved indexing.");
         }
-        this.table = new int[(int) prime];
+        this.table = new int[Math.toIntExact(prime)];
         clear();
     }
 
@@ -48,11 +48,11 @@ public class TranspositionTableImpl implements TranspositionTable {
     }
 
     private int index(long hash) {
-        return Math.floorMod(hash, table.length);
+        return (int) Long.remainderUnsigned(hash, table.length);
     }
 
     private long verifier(long hash) {
-        return Math.floorDiv(hash, table.length);
+        return Long.divideUnsigned(hash, table.length);
     }
 
     @Override

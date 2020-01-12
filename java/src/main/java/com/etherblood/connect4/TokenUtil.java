@@ -2,8 +2,6 @@ package com.etherblood.connect4;
 
 public class TokenUtil {
 
-    private static final boolean FORCE_BYTE_ALIGNED_COLUMNS;
-
     public static final int WIDTH, HEIGHT, BUFFERED_HEIGHT;
     public static final long ROW_0, COLUMN_0, BUFFERED_COLUMN_0;
     public static final long FULL_BOARD, LEFT_SIDE, CENTER_COLUMN;
@@ -11,19 +9,14 @@ public class TokenUtil {
     public static final int RIGHT, RIGHT_DOWN, RIGHT_UP, UP;
     public static final boolean IS_HEIGHT_EVEN, ARE_COLUMNS_BYTE_ALIGNED;
 
-    public static final long[] WIN_CHECK_PATTERNS;
+    public static final long[] WIN_CHECK_PATTERNS = new long[4];
 
     static {
-        //custom settings
-        FORCE_BYTE_ALIGNED_COLUMNS = false;
         WIDTH = 7;
         HEIGHT = 6;
 
         //computed settings
-        if (FORCE_BYTE_ALIGNED_COLUMNS && (HEIGHT >= Byte.SIZE || WIDTH > Long.BYTES)) {
-            throw new IllegalStateException("Cannot force byte aligned columns for dimensions " + WIDTH + " x " + HEIGHT + ".");
-        }
-        BUFFERED_HEIGHT = FORCE_BYTE_ALIGNED_COLUMNS ? Byte.SIZE : HEIGHT + 1;
+        BUFFERED_HEIGHT = HEIGHT + 1;
         ARE_COLUMNS_BYTE_ALIGNED = BUFFERED_HEIGHT == Byte.SIZE;
         if (WIDTH * BUFFERED_HEIGHT > Long.SIZE) {
             throw new IllegalArgumentException();
@@ -43,7 +36,6 @@ public class TokenUtil {
         EVEN_INDEX_ROWS = (COLUMN_0 / 3) * ROW_0;
         ODD_INDEX_ROWS = FULL_BOARD ^ EVEN_INDEX_ROWS;
 
-        WIN_CHECK_PATTERNS = new long[4];
         for (int y = 0; y < HEIGHT; y++) {
             for (int x = 0; x < WIDTH; x++) {
                 WIN_CHECK_PATTERNS[(x + 2 * y) & 3] |= Util.toLongFlag(index(x, y));

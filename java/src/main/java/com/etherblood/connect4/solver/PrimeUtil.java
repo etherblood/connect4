@@ -13,6 +13,9 @@ public class PrimeUtil {
     }
 
     public static long primeLessOrEqual(long n) {
+        if (n <= 1) {
+            throw new IllegalArgumentException(Long.toString(n));
+        }
         while (!isPrime(n)) {
             n--;
         }
