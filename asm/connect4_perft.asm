@@ -70,7 +70,7 @@ perft_start:
     mov r13, r8
     xor r13, r9
     add r13, r11
-    and r13, r12 ; moves now stored in r13
+    and r13, r12 ; moves generated into r13
 
     dec r14
     jnz loop_start
