@@ -46,20 +46,21 @@ public class TicTacToeMaskPerft {
     }
 
     private static int perft(int moves, int ownWins, int oppWins) {
-        if (moves == 0) {
-            return 1;
-        }
-        if ((oppWins & WIN_MASK) != 0) {
-            return 0;
-        }
         int count = 0;
         int iterator = moves;
         while (iterator != 0) {
             int moveIndex = Long.numberOfTrailingZeros(iterator);
             int move = 1 << moveIndex;
             iterator ^= move;
-            int nextWins = ownWins + MOVE_WINS[moveIndex];
-            count += perft(moves ^ move, oppWins, nextWins);
+            int nextMoves = moves ^ move;
+            if (nextMoves == 0) {
+                count++;
+            } else {
+                int nextWins = ownWins + MOVE_WINS[moveIndex];
+                if ((nextWins & WIN_MASK) == 0) {
+                    count += perft(nextMoves, oppWins, nextWins);
+                }
+            }
         }
         return count;
     }

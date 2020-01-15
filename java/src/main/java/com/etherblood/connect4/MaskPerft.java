@@ -70,9 +70,6 @@ public class MaskPerft {
     private static long maskPerft(long own0, long own1, long own2, long opp0, long opp1, long opp2, int depth) {
         long moves = (own0 + opp0 + TokenUtil.ROW_0) & TokenUtil.FULL_BOARD;
         depth--;
-        if (depth == 0) {
-            return Long.bitCount(moves);
-        }
         long sum = 0;
         while (moves != 0) {
             int moveIndex = Long.numberOfTrailingZeros(moves);
@@ -90,7 +87,11 @@ public class MaskPerft {
             if (((own2 & ~new2) & CARRY_MASK) != 0) {
                 continue;
             }
-            sum += maskPerft(opp0, opp1, opp2, new0, new1, new2, depth);
+            if(depth == 1) {
+                sum += Long.bitCount((new0 + opp0 + TokenUtil.ROW_0) & TokenUtil.FULL_BOARD);
+            } else {
+                sum += maskPerft(opp0, opp1, opp2, new0, new1, new2, depth);
+            }
         }
         return sum;
     }
