@@ -8,6 +8,7 @@ import java.util.stream.Collectors;
 
 public class TokenSolver {
 
+    private static final boolean ASSUME_WIN = true;
     private static final boolean ARRAY_STATS_ENABLED = true;
     private static final boolean CHILDS_SHALLOW_SEARCH_ENABLED = true;
     private static final boolean FOLLOW_UP_STRATEGY_TEST_ENABLED = true;
@@ -37,8 +38,8 @@ public class TokenSolver {
     }
 
     public static void main(String[] args) {
-        TranspositionTable table1 = new TwoBig1TranspositionTable(1L << 21);
-        TranspositionTable table2 = new TwoBig1TranspositionTable(1L << 21);
+        TranspositionTable table1 = new TwoBig1TranspositionTable(1L << 28);
+        TranspositionTable table2 = new TwoBig1TranspositionTable(1L << 28);
         TokenSolver solver = new TokenSolver(table1, table2);
         for (int i = 0; i < 1; i++) {
             solve(solver);
@@ -101,7 +102,15 @@ public class TokenSolver {
         totalNodes = 0;
         work = 0;
         totalNanos = -System.nanoTime();
-        int score = solve(ownTokens, opponentTokens, LOSS_SCORE, WIN_SCORE, false);
+        int score;
+        if (ASSUME_WIN) {
+            score = solve(ownTokens, opponentTokens, DRAW_SCORE, WIN_SCORE, false);
+            if (score == DRAW_SCORE) {
+                score = solve(ownTokens, opponentTokens, LOSS_SCORE, DRAW_SCORE, false);
+            }
+        } else {
+            score = solve(ownTokens, opponentTokens, LOSS_SCORE, WIN_SCORE, false);
+        }
         totalNanos += System.nanoTime();
         return score;
     }

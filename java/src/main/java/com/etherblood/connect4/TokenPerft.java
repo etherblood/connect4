@@ -18,8 +18,7 @@ public class TokenPerft {
         long result = perft(0, 0, depth);
         long end = System.nanoTime();
         long durationMillis = (end - start) / 1_000_000;
-        String kiloNodesPerSecond = durationMillis == 0 ? "NaN" : Long.toString(result / durationMillis);
-        System.out.println("perft result: " + result + " in " + durationMillis + "ms (" + kiloNodesPerSecond + "kn/s)");
+        System.out.println("perft result: " + result + " in " + durationMillis + "ms");
     }
 
     public static long perft(long ownTokens, long opponentTokens, int depth) {
