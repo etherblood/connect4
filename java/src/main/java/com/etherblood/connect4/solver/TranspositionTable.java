@@ -6,16 +6,19 @@ package com.etherblood.connect4.solver;
  */
 public interface TranspositionTable {
 
-    static final int UNKNOWN_SCORE = 0;
+    static final int EMPTY_SCORE = 0;
     static final int WIN_SCORE = 1;
     static final int DRAW_SCORE = 2;
-    static final int LOSS_SCORE = 3;
-    static final int DRAW_WIN_SCORE = 4;
-    static final int DRAW_LOSS_SCORE = 5;
+    static final int LOSS_SCORE = 4;
+    static final int DRAW_OR_WIN_SCORE = DRAW_SCORE | WIN_SCORE;
+    static final int DRAW_OR_LOSS_SCORE = LOSS_SCORE | DRAW_SCORE;
+    @Deprecated
+    static final int WIN_OR_LOSS_SCORE = LOSS_SCORE | WIN_SCORE;
+    static final int UNKNOWN_SCORE = LOSS_SCORE | DRAW_SCORE | WIN_SCORE;
 
     int load(long id);
 
-    void store(long id, int work, int score);
+    void store(long id, long work, int score);
 
     void printStats();
 
@@ -24,17 +27,19 @@ public interface TranspositionTable {
     static String scoreToString(int score) {
         switch (score) {
             case UNKNOWN_SCORE:
-                return "empty";
+                return "unknown";
             case WIN_SCORE:
                 return "win";
             case DRAW_SCORE:
                 return "draw";
             case LOSS_SCORE:
                 return "loss";
-            case DRAW_WIN_SCORE:
+            case DRAW_OR_WIN_SCORE:
                 return "draw+";
-            case DRAW_LOSS_SCORE:
+            case DRAW_OR_LOSS_SCORE:
                 return "draw-";
+            case EMPTY_SCORE:
+                return "empty";
             default:
                 throw new AssertionError();
         }

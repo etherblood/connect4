@@ -4,22 +4,21 @@ import java.util.Arrays;
 
 public class MaskPerft {
 
+    private static final int INDEX_MULTIPLIER = 3;
     private static final long CARRY_MASK;
     private static final long[] MOVE_MASKS;
 
     static {
-        CARRY_MASK = ~Long.divideUnsigned(-1, 3);
-        MOVE_MASKS = new long[3 * TokenUtil.WIDTH * TokenUtil.BUFFERED_HEIGHT];
-
+        CARRY_MASK = ~Long.divideUnsigned(~0, 3);
+        MOVE_MASKS = new long[INDEX_MULTIPLIER * TokenUtil.WIDTH * TokenUtil.BUFFERED_HEIGHT];
         long iterator = TokenUtil.FULL_BOARD;
         while (iterator != 0) {
             int moveIndex = Long.numberOfTrailingZeros(iterator);
             long move = 1L << moveIndex;
             iterator ^= move;
-            MOVE_MASKS[3 * moveIndex] |= move;
+            MOVE_MASKS[INDEX_MULTIPLIER * moveIndex] |= move;
         }
-
-        int group = -Math.floorDiv(TokenUtil.WIDTH * TokenUtil.BUFFERED_HEIGHT - 1, -2);
+        int group = TokenUtil.WIDTH * TokenUtil.BUFFERED_HEIGHT / 2;
         for (int direction : Arrays.asList(TokenUtil.RIGHT, TokenUtil.UP, TokenUtil.RIGHT_DOWN, TokenUtil.RIGHT_UP)) {
             long fullSquished = TokenUtil.squish(TokenUtil.FULL_BOARD, direction);
             while (fullSquished != 0) {
@@ -30,8 +29,7 @@ public class MaskPerft {
                     int itemIndex = Long.numberOfTrailingZeros(items);
                     long item = 1L << itemIndex;
                     items ^= item;
-
-                    MOVE_MASKS[3 * itemIndex + group / 32] |= 1L << (2 * (group % 32));
+                    MOVE_MASKS[INDEX_MULTIPLIER * itemIndex + group / 32] |= 1L << (2 * (group % 32));
                 }
                 group++;
             }
@@ -71,17 +69,17 @@ public class MaskPerft {
         long sum = 0;
         while (moves != 0) {
             int moveIndex = Long.numberOfTrailingZeros(moves);
-            long move0 = MOVE_MASKS[3 * moveIndex];
+            long move0 = MOVE_MASKS[INDEX_MULTIPLIER * moveIndex];
             moves &= ~move0;
             long new0 = own0 + move0;
             if (((own0 & ~new0) & CARRY_MASK) != 0) {
                 continue;
             }
-            long new1 = own1 + MOVE_MASKS[3 * moveIndex + 1];
+            long new1 = own1 + MOVE_MASKS[INDEX_MULTIPLIER * moveIndex + 1];
             if (((own1 & ~new1) & CARRY_MASK) != 0) {
                 continue;
             }
-            long new2 = own2 + MOVE_MASKS[3 * moveIndex + 2];
+            long new2 = own2 + MOVE_MASKS[INDEX_MULTIPLIER * moveIndex + 2];
             if (((own2 & ~new2) & CARRY_MASK) != 0) {
                 continue;
             }

@@ -4,13 +4,15 @@ import com.etherblood.connect4.TokenUtil;
 import com.etherblood.connect4.Util;
 import java.time.Instant;
 import java.util.Arrays;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 public class TokenSolver {
 
-    private static final boolean ASSUME_WIN = true;
+    private static final boolean ASSUME_WIN = false;
     private static final boolean ARRAY_STATS_ENABLED = true;
-    private static final boolean CHILDS_SHALLOW_SEARCH_ENABLED = true;
+    private static final boolean CHILDS_SHALLOW_SEARCH_ENABLED = false;
     private static final boolean FOLLOW_UP_STRATEGY_TEST_ENABLED = true;
     private static final boolean NO_WINS_REMAINING_TEST_ENABLED = true;
     private static final boolean SYMMETRY_TEST_ENABLED = true;
@@ -18,12 +20,12 @@ public class TokenSolver {
     private static final int WIN_SCORE = 1;
     private static final int DRAW_SCORE = 0;
     private static final int LOSS_SCORE = -1;
-    private static final int REQUIRES_TT_SEARCH = Integer.MIN_VALUE;
-    private static final int REQUIRES_NO_TT_SEARCH = Integer.MIN_VALUE + 1;
+    private static final int UNKNOWN_SCORE = Integer.MIN_VALUE;
 
-    private final long[] ttStats = new long[6];
+    private final long[] ttStats = new long[8];
     private long drawCutoff, lossCutoff, winCutoff, drawLossCutoff, drawWinCutoff;
     private long totalNodes, totalNanos, alphaNodes, betaNodes, shallowNodes, shallowCutoff;
+    private final long[] nodesByDepth = new long[TokenUtil.WIDTH * TokenUtil.HEIGHT + 1];
 
     private final TranspositionTable evenTable, oddTable;
     private final int[] history;
@@ -38,8 +40,8 @@ public class TokenSolver {
     }
 
     public static void main(String[] args) {
-        TranspositionTable table1 = new TwoBig1TranspositionTable(1L << 28);
-        TranspositionTable table2 = new TwoBig1TranspositionTable(1L << 28);
+        TranspositionTable table1 = new TwoBig1TranspositionTable(1L << 27);
+        TranspositionTable table2 = new TwoBig1TranspositionTable(1L << 27);
         TokenSolver solver = new TokenSolver(table1, table2);
         for (int i = 0; i < 1; i++) {
             solve(solver);
@@ -62,9 +64,24 @@ public class TokenSolver {
         System.out.println("shallow cutoffs: " + solver.shallowCutoff);
         System.out.println("alpha nodes: " + solver.alphaNodes);
         System.out.println("beta nodes: " + solver.betaNodes);
+        System.out.println("Mean branching: " + solver.totalNodes / (float) (solver.alphaNodes + solver.betaNodes));
         System.out.println("history updates: " + Arrays.toString(solver.historyUpdates));
         double historyUpdatesSum = Arrays.stream(solver.historyUpdates).sum();
         System.out.println("history updates%: " + Arrays.stream(solver.historyUpdates).mapToDouble(x -> x / historyUpdatesSum).mapToObj(x -> Util.toPercentage(x, 2)).collect(Collectors.joining(", ", "[", "]")));
+        double parentsSum = 0;
+        double childsSum = 0;
+        for (int x = 0; x < solver.historyUpdates.length; x++) {
+            long value = solver.historyUpdates[x];
+            parentsSum += value;
+            childsSum += (1 + x) * value;
+        }
+        System.out.println("Avg order branching: " + childsSum / parentsSum);
+        System.out.println("nodes by depth: " + Arrays.toString(solver.nodesByDepth));
+        float[] branchingByDepth = new float[TokenUtil.WIDTH * TokenUtil.HEIGHT];
+        for (int i = 0; i < branchingByDepth.length; i++) {
+            branchingByDepth[i] = (float) solver.nodesByDepth[i + 1] / solver.nodesByDepth[i];
+        }
+        System.out.println("branching by depth: " + Arrays.toString(branchingByDepth));
         System.out.println();
         System.out.println("Odd table:");
         solver.oddTable.printStats();
@@ -73,9 +90,15 @@ public class TokenSolver {
         solver.evenTable.printStats();
         System.out.println();
         if (ARRAY_STATS_ENABLED) {
-            String[] scoreNames = {"empty", "win", "draw", "loss", "draw+", "draw-"};
-            for (int i = 0; i < 6; i++) {
-                System.out.println(scoreNames[i] + " loads: " + solver.ttStats[i]);
+            Map<Integer, String> scoreNames = new LinkedHashMap<>();
+            scoreNames.put(TranspositionTable.EMPTY_SCORE, "empty");
+            scoreNames.put(TranspositionTable.WIN_SCORE, "win");
+            scoreNames.put(TranspositionTable.DRAW_SCORE, "draw");
+            scoreNames.put(TranspositionTable.LOSS_SCORE, "loss");
+            scoreNames.put(TranspositionTable.DRAW_OR_WIN_SCORE, "draw+");
+            scoreNames.put(TranspositionTable.DRAW_OR_LOSS_SCORE, "draw-");
+            for (Map.Entry<Integer, String> entry : scoreNames.entrySet()) {
+                System.out.println(entry.getValue() + " loads: " + solver.ttStats[entry.getKey()]);
             }
             System.out.println();
         }
@@ -116,18 +139,31 @@ public class TokenSolver {
     }
 
     private void resetHistory() {
+        Arrays.fill(history, 0);
         Arrays.fill(historyUpdates, 0);
-        for (int x = 0; x < TokenUtil.WIDTH; x++) {
-            for (int y = 0; y < TokenUtil.HEIGHT; y++) {
-                int index = TokenUtil.index(x, y);
-                history[index] = ((2 * y) - Math.abs((TokenUtil.WIDTH - 1) - 2 * x) + (TokenUtil.WIDTH - 1)) / 2;
+        for (int direction : Arrays.asList(TokenUtil.RIGHT, TokenUtil.UP, TokenUtil.RIGHT_DOWN, TokenUtil.RIGHT_UP)) {
+            long fullSquished = TokenUtil.squish(TokenUtil.FULL_BOARD, direction);
+            while (fullSquished != 0) {
+                long squished = Long.lowestOneBit(fullSquished);
+                fullSquished ^= squished;
+                long items = TokenUtil.stretch(squished, direction);
+                while (items != 0) {
+                    int itemIndex = Long.numberOfTrailingZeros(items);
+                    long item = 1L << itemIndex;
+                    items ^= item;
+                    history[itemIndex]++;
+                }
             }
+        }
+        for (int j = 0; j < history.length; j++) {
+            history[j] /= 3; // arbitrary value which tested well
         }
     }
 
-    private int solve(long ownTokens, long opponentTokens, int alpha, int beta, boolean earlyExit) {
-        if (!earlyExit) {
+    private int solve(long ownTokens, long opponentTokens, int alpha, int beta, boolean shallow) {
+        if (!shallow) {
             totalNodes++;
+            nodesByDepth[Long.bitCount(ownTokens | opponentTokens)]++;
         } else {
             shallowNodes++;
         }
@@ -150,10 +186,10 @@ public class TokenSolver {
                 // there are multiple forced moves which can't all be played
                 return LOSS_SCORE;
             }
-            // search forced move, skip TT
-            if (earlyExit) {
-                return -REQUIRES_NO_TT_SEARCH;
+            if (shallow) {
+                return -UNKNOWN_SCORE;
             }
+            // search forced move, skip TT
             return -solve(opponentTokens, TokenUtil.move(ownTokens, forcedMove), -beta, -alpha, false);
         }
         if (FOLLOW_UP_STRATEGY_TEST_ENABLED && TokenUtil.IS_HEIGHT_EVEN && Long.bitCount(moves & TokenUtil.ODD_INDEX_ROWS) == 1) {
@@ -197,8 +233,8 @@ public class TokenSolver {
                 return LOSS_SCORE;
             }
             // only 1 move, skip TT
-            if (earlyExit) {
-                return -REQUIRES_NO_TT_SEARCH;
+            if (shallow) {
+                return -UNKNOWN_SCORE;
             }
             return -solve(opponentTokens, TokenUtil.move(ownTokens, reducedMoves), -beta, -alpha, false);
         }
@@ -224,14 +260,14 @@ public class TokenSolver {
             case TranspositionTable.LOSS_SCORE:
                 lossCutoff++;
                 return LOSS_SCORE;
-            case TranspositionTable.DRAW_WIN_SCORE:
+            case TranspositionTable.DRAW_OR_WIN_SCORE:
                 if (DRAW_SCORE >= beta) {
                     drawWinCutoff++;
                     return DRAW_SCORE;
                 }
                 alpha = DRAW_SCORE;
                 break;
-            case TranspositionTable.DRAW_LOSS_SCORE:
+            case TranspositionTable.DRAW_OR_LOSS_SCORE:
                 if (DRAW_SCORE <= alpha) {
                     drawLossCutoff++;
                     return DRAW_SCORE;
@@ -241,11 +277,11 @@ public class TokenSolver {
             default:
                 throw new AssertionError(Integer.toString(entryScore));
         }
-        if (earlyExit) {
-            return -REQUIRES_TT_SEARCH;
+        if (shallow) {
+            return -UNKNOWN_SCORE;
         }
 
-        int nextEntryScore = alpha == LOSS_SCORE ? TranspositionTable.LOSS_SCORE : TranspositionTable.DRAW_LOSS_SCORE;
+        int nextEntryScore = alpha == LOSS_SCORE ? TranspositionTable.LOSS_SCORE : TranspositionTable.DRAW_OR_LOSS_SCORE;
         try {
             long movesIterator = reducedMoves;
             if (CHILDS_SHALLOW_SEARCH_ENABLED) {
@@ -255,8 +291,7 @@ public class TokenSolver {
                     int score;
                     score = -solve(opponentTokens, TokenUtil.move(ownTokens, move), -beta, -alpha, true);
                     switch (score) {
-                        case REQUIRES_TT_SEARCH:
-                        case REQUIRES_NO_TT_SEARCH:
+                        case UNKNOWN_SCORE:
                             continue;
                         default:
                             reducedMoves ^= move;
@@ -265,7 +300,7 @@ public class TokenSolver {
 
                     if (score > alpha) {
                         if (score >= beta) {
-                            nextEntryScore = score == WIN_SCORE ? TranspositionTable.WIN_SCORE : TranspositionTable.DRAW_WIN_SCORE;
+                            nextEntryScore = score == WIN_SCORE ? TranspositionTable.WIN_SCORE : TranspositionTable.DRAW_OR_WIN_SCORE;
                             shallowCutoff++;
                             return score;
                         }
@@ -281,7 +316,7 @@ public class TokenSolver {
                 int score = -solve(opponentTokens, TokenUtil.move(ownTokens, move), -beta, -alpha, false);
                 if (score > alpha) {
                     if (score >= beta) {
-                        nextEntryScore = score == WIN_SCORE ? TranspositionTable.WIN_SCORE : TranspositionTable.DRAW_WIN_SCORE;
+                        nextEntryScore = score == WIN_SCORE ? TranspositionTable.WIN_SCORE : TranspositionTable.DRAW_OR_WIN_SCORE;
                         updateHistory(reducedMoves ^ movesIterator, move);
                         betaNodes++;
                         return score;
@@ -295,7 +330,7 @@ public class TokenSolver {
             return alpha;
         } finally {
             if (entryScore != nextEntryScore) {
-                table.store(symmetricId, Util.floorLog(work - workStart), nextEntryScore);
+                table.store(symmetricId, work - workStart, nextEntryScore);
             }
         }
     }

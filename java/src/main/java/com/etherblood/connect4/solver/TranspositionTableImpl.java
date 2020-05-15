@@ -35,7 +35,7 @@ public class TranspositionTableImpl implements TranspositionTable {
     }
 
     @Override
-    public void store(long id, int work, int score) {
+    public void store(long id, long work, int score) {
         assert (score >>> SCORE_BITS) == 0;
         stores++;
         long hash = hash(id);

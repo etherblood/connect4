@@ -125,6 +125,10 @@ public class TokenUtil {
         return FULL_BOARD ^ occupied(ownTokens, opponentTokens);
     }
 
+    public static long upperBoundId() {
+        return Util.toLongMask(WIDTH * BUFFERED_HEIGHT);
+    }
+
     public static long id(long ownTokens, long opponentTokens) {
         return (occupied(ownTokens, opponentTokens) + ROW_0) ^ ownTokens;
     }
@@ -134,6 +138,10 @@ public class TokenUtil {
     }
 
     public static String toString(long ownTokens, long opponentTokens) {
+        return toString(ownTokens, opponentTokens, 0);
+    }
+
+    public static String toString(long ownTokens, long opponentTokens, long threats) {
         if ((ownTokens | opponentTokens | FULL_BOARD) != FULL_BOARD) {
             throw new IllegalArgumentException();
         }
@@ -143,12 +151,23 @@ public class TokenUtil {
         StringBuilder builder = new StringBuilder();
         for (int y = HEIGHT - 1; y >= 0; y--) {
             for (int x = 0; x < WIDTH; x++) {
-                if ((Util.toLongFlag(index(x, y)) & ownTokens) != 0) {
-                    builder.append("[x]");
-                } else if ((Util.toLongFlag(index(x, y)) & opponentTokens) != 0) {
-                    builder.append("[o]");
+                long flag = Util.toLongFlag(index(x, y));
+                if((threats & flag) != 0) {
+                    builder.append('(');
                 } else {
-                    builder.append("[ ]");
+                    builder.append('[');
+                }
+                if ((flag & ownTokens) != 0) {
+                    builder.append('x');
+                } else if ((flag & opponentTokens) != 0) {
+                    builder.append('o');
+                } else {
+                    builder.append(' ');
+                }
+                if((threats & flag) != 0) {
+                    builder.append(')');
+                } else {
+                    builder.append(']');
                 }
             }
             if (y != 0) {
