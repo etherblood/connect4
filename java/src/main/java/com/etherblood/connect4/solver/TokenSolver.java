@@ -15,7 +15,6 @@ public class TokenSolver {
     private static final boolean CHILDS_SHALLOW_SEARCH_ENABLED = false;
     private static final boolean FOLLOW_UP_STRATEGY_TEST_ENABLED = true;
     private static final boolean NO_WINS_REMAINING_TEST_ENABLED = true;
-    private static final boolean SYMMETRY_TEST_ENABLED = true;
 
     private static final int WIN_SCORE = 1;
     private static final int DRAW_SCORE = 0;
@@ -91,7 +90,7 @@ public class TokenSolver {
         System.out.println();
         if (ARRAY_STATS_ENABLED) {
             Map<Integer, String> scoreNames = new LinkedHashMap<>();
-            scoreNames.put(TranspositionTable.EMPTY_SCORE, "empty");
+            scoreNames.put(TranspositionTable.UNKNOWN_SCORE, "unknown");
             scoreNames.put(TranspositionTable.WIN_SCORE, "win");
             scoreNames.put(TranspositionTable.DRAW_SCORE, "draw");
             scoreNames.put(TranspositionTable.LOSS_SCORE, "loss");
@@ -193,10 +192,10 @@ public class TokenSolver {
             return -solve(opponentTokens, TokenUtil.move(ownTokens, forcedMove), -beta, -alpha, false);
         }
         if (FOLLOW_UP_STRATEGY_TEST_ENABLED && TokenUtil.IS_HEIGHT_EVEN && Long.bitCount(moves & TokenUtil.ODD_INDEX_ROWS) == 1) {
-            // test whether follow up strategy ensures at least a draw
             if ((opponentThreats & TokenUtil.EVEN_INDEX_ROWS) == 0) {
                 long opponentEvenFill = opponentTokens | (~ownTokens & TokenUtil.EVEN_INDEX_ROWS);
                 if (!TokenUtil.isNonVerticalWin(opponentEvenFill)) {
+                    // opponent can't win against follow up strategy
                     if (beta <= DRAW_SCORE) {
                         return DRAW_SCORE;
                     }
@@ -223,7 +222,7 @@ public class TokenSolver {
         long mirroredId = TokenUtil.mirror(id);
         // losing moves won't improve alpha and can be pruned
         long reducedMoves = moves & ~losingSquares;
-        if (SYMMETRY_TEST_ENABLED && id == mirroredId) {
+        if (id == mirroredId) {
             // symmetric moves won't improve over their counterpart and can be pruned
             reducedMoves &= TokenUtil.LEFT_SIDE | TokenUtil.CENTER_COLUMN;
         }
@@ -245,9 +244,7 @@ public class TokenSolver {
         int entryScore = table.load(symmetricId);
         long workStart = work;
         work++;
-        if (ARRAY_STATS_ENABLED) {
-            ttStats[entryScore]++;
-        }
+        ttStats[entryScore]++;
         switch (entryScore) {
             case TranspositionTable.UNKNOWN_SCORE:
                 break;
@@ -316,7 +313,7 @@ public class TokenSolver {
                 int score = -solve(opponentTokens, TokenUtil.move(ownTokens, move), -beta, -alpha, false);
                 if (score > alpha) {
                     if (score >= beta) {
-                        nextEntryScore = score == WIN_SCORE ? TranspositionTable.WIN_SCORE : TranspositionTable.DRAW_OR_WIN_SCORE;
+                        nextEntryScore = beta == WIN_SCORE ? TranspositionTable.WIN_SCORE : TranspositionTable.DRAW_OR_WIN_SCORE;
                         updateHistory(reducedMoves ^ movesIterator, move);
                         betaNodes++;
                         return score;
@@ -353,9 +350,7 @@ public class TokenSolver {
 
     private void updateHistory(long weakMoves, long goodMove) {
         int weakCount = Long.bitCount(weakMoves);
-        if (ARRAY_STATS_ENABLED) {
-            historyUpdates[weakCount]++;
-        }
+        historyUpdates[weakCount]++;
         history[Long.numberOfTrailingZeros(goodMove)] += weakCount;
         while (weakMoves != 0) {
             history[Long.numberOfTrailingZeros(weakMoves)]--;
