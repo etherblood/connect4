@@ -27,15 +27,14 @@ public class TokenSolver {
     private final long[] nodesByDepth = new long[TokenUtil.WIDTH * TokenUtil.HEIGHT + 1];
 
     private final TranspositionTable evenTable, oddTable;
-    private final int[] history;
-    private final int[] historyUpdates;
+    private final int[] history = new int[TokenUtil.WIDTH * TokenUtil.BUFFERED_HEIGHT - 1];
+    private final long[] historyUpdates = new long[TokenUtil.WIDTH];
+    private final long[] alphaBranching = new long[TokenUtil.WIDTH + 1];
     private long work;
 
     public TokenSolver(TranspositionTable oddTable, TranspositionTable evenTable) {
         this.oddTable = oddTable;
         this.evenTable = evenTable;
-        history = new int[TokenUtil.WIDTH * TokenUtil.BUFFERED_HEIGHT - 1];
-        historyUpdates = new int[TokenUtil.WIDTH];
     }
 
     public static void main(String[] args) {
@@ -74,7 +73,15 @@ public class TokenSolver {
             parentsSum += value;
             childsSum += (1 + x) * value;
         }
-        System.out.println("Avg order branching: " + childsSum / parentsSum);
+        System.out.println("Avg beta branching: " + childsSum / parentsSum);
+        parentsSum = 0;
+        childsSum = 0;
+        for (int x = 0; x < solver.alphaBranching.length; x++) {
+            long value = solver.alphaBranching[x];
+            parentsSum += value;
+            childsSum += x * value;
+        }
+        System.out.println("Avg alpha branching: " + childsSum / parentsSum);
         System.out.println("nodes by depth: " + Arrays.toString(solver.nodesByDepth));
         float[] branchingByDepth = new float[TokenUtil.WIDTH * TokenUtil.HEIGHT];
         for (int i = 0; i < branchingByDepth.length; i++) {
@@ -316,16 +323,21 @@ public class TokenSolver {
                         nextEntryScore = beta == WIN_SCORE ? TranspositionTable.WIN_SCORE : TranspositionTable.DRAW_OR_WIN_SCORE;
                         updateHistory(reducedMoves ^ movesIterator, move);
                         betaNodes++;
-                        return score;
+                        return beta;
                     }
                     alpha = score;
                     nextEntryScore = TranspositionTable.DRAW_SCORE;
                 }
                 movesIterator ^= move;
             }
+            if (reducedMoves != 0) {
+                alphaBranching[Long.bitCount(reducedMoves)]++;
+            }
             alphaNodes++;
             return alpha;
         } finally {
+            nextEntryScore &= entryScore;// improves accuracy of stored scores
+            assert nextEntryScore != TranspositionTable.EMPTY_SCORE;
             if (entryScore != nextEntryScore) {
                 table.store(symmetricId, work - workStart, nextEntryScore);
             }

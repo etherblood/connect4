@@ -12,7 +12,6 @@ public interface TranspositionTable {
     static final int LOSS_SCORE = 4;
     static final int DRAW_OR_WIN_SCORE = DRAW_SCORE | WIN_SCORE;
     static final int DRAW_OR_LOSS_SCORE = LOSS_SCORE | DRAW_SCORE;
-    @Deprecated
     static final int WIN_OR_LOSS_SCORE = LOSS_SCORE | WIN_SCORE;
     static final int UNKNOWN_SCORE = LOSS_SCORE | DRAW_SCORE | WIN_SCORE;
 
