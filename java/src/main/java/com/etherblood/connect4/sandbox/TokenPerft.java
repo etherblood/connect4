@@ -1,10 +1,10 @@
-package com.etherblood.connect4;
+package com.etherblood.connect4.sandbox;
 
-import static com.etherblood.connect4.TokenUtil.FULL_BOARD;
-import static com.etherblood.connect4.TokenUtil.generateMoves;
-import static com.etherblood.connect4.TokenUtil.isWin;
-import static com.etherblood.connect4.TokenUtil.move;
-import static com.etherblood.connect4.TokenUtil.occupied;
+import static com.etherblood.connect4.sandbox.TokenUtil.FULL_BOARD;
+import static com.etherblood.connect4.sandbox.TokenUtil.generateMoves;
+import static com.etherblood.connect4.sandbox.TokenUtil.isWin;
+import static com.etherblood.connect4.sandbox.TokenUtil.move;
+import static com.etherblood.connect4.sandbox.TokenUtil.occupied;
 
 public class TokenPerft {
 

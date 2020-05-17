@@ -1,6 +1,6 @@
 package com.etherblood.connect4.solver;
 
-import com.etherblood.connect4.TokenUtil;
+import com.etherblood.connect4.BoardSettings;
 import com.etherblood.connect4.Util;
 import java.util.Arrays;
 
@@ -16,10 +16,10 @@ public class TwoBig1TranspositionTable implements TranspositionTable {
     private final long[] table;
     private long hits, misses, stores;
 
-    public TwoBig1TranspositionTable(long size) {
+    public TwoBig1TranspositionTable(long size, BoardSettings board) {
         this.table = new long[Math.toIntExact(PrimeUtil.primeLessOrEqual(size / 2))];
         clear();
-        int maxVerifier = verifier(TokenUtil.upperBoundId());
+        int maxVerifier = verifier(board.upperBoundId());
         if (maxVerifier > VERIFY_MASK) {
             System.out.println("WARNING: Storing of position id's is lossy. Id to index ratio: " + Util.toPercentage(maxVerifier, VERIFY_MASK, 1));
         }
@@ -49,6 +49,9 @@ public class TwoBig1TranspositionTable implements TranspositionTable {
     @Override
     public void store(long id, long work, int score) {
         assert score == (score & SCORE_MASK);
+        assert score != EMPTY_SCORE;
+        assert score != UNKNOWN_SCORE;
+        assert score != WIN_OR_LOSS_SCORE;
         stores++;
         int workScore = Math.min(Util.toIntMask(WORK_BITS), Util.floorLog(work));
         int index = index(id);
@@ -95,14 +98,14 @@ public class TwoBig1TranspositionTable implements TranspositionTable {
         }
 
         int size = 2 * table.length;
-        int full = size - scores[0];
+        int full = size - scores[TranspositionTable.UNKNOWN_SCORE];
         System.out.println(" size: " + size + " - " + Util.humanReadableByteCountBin((long) size * Integer.BYTES));
         System.out.println(" hits: " + hits + " - " + Util.toPercentage(hits, hits + misses, 1));
         System.out.println(" misses: " + misses + " - " + Util.toPercentage(misses, hits + misses, 1));
         System.out.println(" overwrites: " + (stores - full));
         System.out.println(" loads: " + (hits + misses));
         System.out.println(" stores: " + stores);
-        System.out.println("  " + TranspositionTable.scoreToString(TranspositionTable.EMPTY_SCORE) + ": " + scores[TranspositionTable.EMPTY_SCORE] + " - " + Util.toPercentage(scores[TranspositionTable.EMPTY_SCORE], size, 1));
+        System.out.println("  unused: " + scores[TranspositionTable.UNKNOWN_SCORE] + " - " + Util.toPercentage(scores[TranspositionTable.UNKNOWN_SCORE], size, 1));
         System.out.println("  full: " + full + " - " + Util.toPercentage(full, size, 1));
         for (int i = 0; i < scores.length; i++) {
             if (i == TranspositionTable.UNKNOWN_SCORE || i == TranspositionTable.EMPTY_SCORE || i == TranspositionTable.WIN_OR_LOSS_SCORE) {
@@ -115,7 +118,7 @@ public class TwoBig1TranspositionTable implements TranspositionTable {
 
     @Override
     public final void clear() {
-        Arrays.fill(table, 0);
+        Arrays.fill(table, ~0);
         hits = 0;
         misses = 0;
         stores = 0;

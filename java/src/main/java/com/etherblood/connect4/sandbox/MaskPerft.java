@@ -1,4 +1,4 @@
-package com.etherblood.connect4;
+package com.etherblood.connect4.sandbox;
 
 import java.util.Arrays;
 

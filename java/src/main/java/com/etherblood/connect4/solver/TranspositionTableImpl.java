@@ -37,6 +37,9 @@ public class TranspositionTableImpl implements TranspositionTable {
     @Override
     public void store(long id, long work, int score) {
         assert (score >>> SCORE_BITS) == 0;
+        assert score != EMPTY_SCORE;
+        assert score != UNKNOWN_SCORE;
+        assert score != WIN_OR_LOSS_SCORE;
         stores++;
         long hash = hash(id);
         int index = index(hash);
@@ -57,7 +60,7 @@ public class TranspositionTableImpl implements TranspositionTable {
 
     @Override
     public void printStats() {
-        int[] scores = new int[6];
+        int[] scores = new int[8];
         for (int i = 0; i < table.length; i++) {
             scores[table[i] >>> VERIFY_BITS]++;
         }
@@ -68,10 +71,10 @@ public class TranspositionTableImpl implements TranspositionTable {
         System.out.println(" overwrites: " + (stores - full));
         System.out.println(" loads: " + (hits + misses));
         System.out.println(" stores: " + stores);
-        System.out.println("  " + TranspositionTable.scoreToString(TranspositionTable.UNKNOWN_SCORE) + ": " + scores[TranspositionTable.UNKNOWN_SCORE]);
+        System.out.println("  unused: " + scores[TranspositionTable.UNKNOWN_SCORE]);
         System.out.println("  full: " + (table.length - scores[TranspositionTable.UNKNOWN_SCORE]));
-        for (int i = 0; i < 6; i++) {
-            if (i == TranspositionTable.UNKNOWN_SCORE) {
+        for (int i = 0; i < scores.length; i++) {
+            if (i == TranspositionTable.UNKNOWN_SCORE || i == TranspositionTable.EMPTY_SCORE || i == TranspositionTable.WIN_OR_LOSS_SCORE) {
                 continue;
             }
             System.out.println("   " + TranspositionTable.scoreToString(i) + ": " + scores[i]);
@@ -80,7 +83,7 @@ public class TranspositionTableImpl implements TranspositionTable {
 
     @Override
     public final void clear() {
-        Arrays.fill(table, 0);
+        Arrays.fill(table, ~0);
         hits = 0;
         misses = 0;
         stores = 0;

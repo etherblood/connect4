@@ -1,4 +1,6 @@
-package com.etherblood.connect4;
+package com.etherblood.connect4.sandbox;
+
+import com.etherblood.connect4.Util;
 
 public class TokenUtil {
 
@@ -7,7 +9,7 @@ public class TokenUtil {
     public static final long FULL_BOARD, LEFT_SIDE, CENTER_COLUMN;
     public static final long EVEN_INDEX_ROWS, ODD_INDEX_ROWS;
     public static final int RIGHT, RIGHT_DOWN, RIGHT_UP, UP;
-    public static final boolean IS_HEIGHT_EVEN, ARE_COLUMNS_BYTE_ALIGNED;
+    public static final boolean IS_HEIGHT_EVEN;
 
     public static final long[] WIN_CHECK_PATTERNS = new long[4];
 
@@ -17,7 +19,6 @@ public class TokenUtil {
 
         //computed settings
         BUFFERED_HEIGHT = HEIGHT + 1;
-        ARE_COLUMNS_BYTE_ALIGNED = BUFFERED_HEIGHT == Byte.SIZE;
         if (WIDTH * BUFFERED_HEIGHT > Long.SIZE) {
             throw new IllegalArgumentException();
         }
@@ -41,21 +42,6 @@ public class TokenUtil {
                 WIN_CHECK_PATTERNS[(x + 2 * y) & 3] |= Util.toLongFlag(index(x, y));
             }
         }
-    }
-
-    public static long mirror(long tokens) {
-        if (ARE_COLUMNS_BYTE_ALIGNED) {
-            return Long.reverseBytes(tokens) >>> (RIGHT * (Long.BYTES - WIDTH));
-        }
-        long result = tokens & CENTER_COLUMN;
-        for (int x = 0; x < WIDTH / 2; x++) {
-            int mirrorX = WIDTH - x - 1;
-            int offset = mirrorX - x;
-
-            result |= (tokens & (COLUMN_0 << (x * RIGHT))) << (offset * RIGHT);
-            result |= (tokens & (COLUMN_0 << (mirrorX * RIGHT))) >>> (offset * RIGHT);
-        }
-        return result;
     }
 
     public static long move(long tokens, long moves) {
@@ -87,17 +73,17 @@ public class TokenUtil {
     public static long threats(long ownTokens, long opponentTokens) {
         long free = unoccupied(ownTokens, opponentTokens);
         long squishedRight = 0, squishedRightDown = 0, squishedRightUp = 0;
-        for (long pattern : TokenUtil.WIN_CHECK_PATTERNS) {
-            long ownPattern = TokenUtil.move(ownTokens, free & pattern);
-            squishedRight |= TokenUtil.squish(ownPattern, TokenUtil.RIGHT);
-            squishedRightDown |= TokenUtil.squish(ownPattern, TokenUtil.RIGHT_DOWN);
-            squishedRightUp |= TokenUtil.squish(ownPattern, TokenUtil.RIGHT_UP);
+        for (long pattern : WIN_CHECK_PATTERNS) {
+            long ownPattern = move(ownTokens, free & pattern);
+            squishedRight |= squish(ownPattern, RIGHT);
+            squishedRightDown |= squish(ownPattern, RIGHT_DOWN);
+            squishedRightUp |= squish(ownPattern, RIGHT_UP);
         }
-        long squishedUp = TokenUtil.squish(TokenUtil.move(ownTokens, generateMoves(ownTokens, opponentTokens)), TokenUtil.UP);
-        return (TokenUtil.stretch(squishedUp, TokenUtil.UP)
-                | TokenUtil.stretch(squishedRight, TokenUtil.RIGHT)
-                | TokenUtil.stretch(squishedRightDown, TokenUtil.RIGHT_DOWN)
-                | TokenUtil.stretch(squishedRightUp, TokenUtil.RIGHT_UP))
+        long squishedUp = squish(move(ownTokens, generateMoves(ownTokens, opponentTokens)), UP);
+        return (stretch(squishedUp, UP)
+                | stretch(squishedRight, RIGHT)
+                | stretch(squishedRightDown, RIGHT_DOWN)
+                | stretch(squishedRightUp, RIGHT_UP))
                 & free;
     }
 

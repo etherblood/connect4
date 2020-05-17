@@ -1,4 +1,4 @@
-package com.etherblood.connect4;
+package com.etherblood.connect4.sandbox;
 
 public class TicTacToeMaskPerft {
 
