@@ -63,8 +63,8 @@ public class TokenSolverTest {
         for (Map.Entry<BoardSettings, Integer> entry : gameResults.entrySet()) {
             BoardSettings settings = entry.getKey();
             int expectedSolution = entry.getValue();
-            TranspositionTable oddTable = new TwoBig1TranspositionTable(1 << 27, settings);
-            TranspositionTable evenTable = new TwoBig1TranspositionTable(1 << 27, settings);
+            TranspositionTable oddTable = new TwoBig1TranspositionTable(1 << 25, settings);
+            TranspositionTable evenTable = new TwoBig1TranspositionTable(1 << 25, settings);
             System.out.println(settings.WIDTH + " x " + settings.HEIGHT);
             TokenSolver solver = new TokenSolver(settings, oddTable, evenTable);
             int solution = solver.solveVerbose(0, 0);

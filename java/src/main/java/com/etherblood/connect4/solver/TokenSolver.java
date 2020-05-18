@@ -10,7 +10,6 @@ import java.util.stream.Collectors;
 
 public class TokenSolver {
 
-    private static final boolean ASSUME_WIN = false;
     private static final boolean FOLLOW_UP_STRATEGY_TEST_ENABLED = true;
     private static final boolean NO_WINS_REMAINING_TEST_ENABLED = true;
 
@@ -111,6 +110,9 @@ public class TokenSolver {
         }
         resetHistory();
         Arrays.fill(ttStats, 0);
+        Arrays.fill(nodesByDepth, 0);
+        Arrays.fill(historyUpdates, 0);
+        Arrays.fill(alphaBranching, 0);
         drawWinCutoff = 0;
         drawLossCutoff = 0;
         drawCutoff = 0;
@@ -121,22 +123,13 @@ public class TokenSolver {
         totalNodes = 0;
         work = 0;
         totalNanos = -System.nanoTime();
-        int score;
-        if (ASSUME_WIN) {
-            score = solve(ownTokens, opponentTokens, DRAW_SCORE, WIN_SCORE);
-            if (score == DRAW_SCORE) {
-                score = solve(ownTokens, opponentTokens, LOSS_SCORE, DRAW_SCORE);
-            }
-        } else {
-            score = solve(ownTokens, opponentTokens, LOSS_SCORE, WIN_SCORE);
-        }
+        int score = solve(ownTokens, opponentTokens, LOSS_SCORE, WIN_SCORE);
         totalNanos += System.nanoTime();
         return score;
     }
 
     private void resetHistory() {
         Arrays.fill(history, 0);
-        Arrays.fill(historyUpdates, 0);
         for (int direction : Arrays.asList(board.RIGHT, board.UP, board.RIGHT_DOWN, board.RIGHT_UP)) {
             long fullSquished = board.squish(board.FULL_BOARD, direction);
             while (fullSquished != 0) {
@@ -150,9 +143,6 @@ public class TokenSolver {
                     history[itemIndex]++;
                 }
             }
-        }
-        for (int j = 0; j < history.length; j++) {
-            history[j] /= 3; // arbitrary value which tested well
         }
     }
 
@@ -262,7 +252,7 @@ public class TokenSolver {
                 beta = DRAW_SCORE;
                 break;
             default:
-                throw new AssertionError(Integer.toString(entryScore));
+                throw new AssertionError(entryScore);
         }
 
         long movesIterator = reducedMoves;

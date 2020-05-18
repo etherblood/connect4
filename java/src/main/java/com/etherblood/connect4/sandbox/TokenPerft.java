@@ -1,11 +1,5 @@
 package com.etherblood.connect4.sandbox;
 
-import static com.etherblood.connect4.sandbox.TokenUtil.FULL_BOARD;
-import static com.etherblood.connect4.sandbox.TokenUtil.generateMoves;
-import static com.etherblood.connect4.sandbox.TokenUtil.isWin;
-import static com.etherblood.connect4.sandbox.TokenUtil.move;
-import static com.etherblood.connect4.sandbox.TokenUtil.occupied;
-
 public class TokenPerft {
 
     public static void main(String[] args) {
@@ -22,7 +16,7 @@ public class TokenPerft {
     }
 
     public static long perft(long ownTokens, long opponentTokens, int depth) {
-        long free = FULL_BOARD ^ occupied(ownTokens, opponentTokens);
+        long free = TokenUtil.FULL_BOARD ^ TokenUtil.occupied(ownTokens, opponentTokens);
         depth = Math.min(depth, Long.bitCount(free));
         if (depth < 0) {
             throw new IllegalArgumentException();
@@ -31,21 +25,21 @@ public class TokenPerft {
             return 1;
         }
         if (depth == 1) {
-            return Long.bitCount(generateMoves(ownTokens, opponentTokens));
+            return Long.bitCount(TokenUtil.generateMoves(ownTokens, opponentTokens));
         }
         return fastPerft(ownTokens, opponentTokens, depth);
     }
 
     private static long fastPerft(long ownTokens, long opponentTokens, int depth) {
         assert depth > 1;
-        long moves = generateMoves(ownTokens, opponentTokens);
+        long moves = TokenUtil.generateMoves(ownTokens, opponentTokens);
         long sum = 0;
         while (moves != 0) {
             long move = Long.lowestOneBit(moves);
-            long nextTokens = move(ownTokens, move);
-            if (!isWin(nextTokens)) {
+            long nextTokens = TokenUtil.move(ownTokens, move);
+            if (!TokenUtil.isWin(nextTokens)) {
                 if(depth == 2) {
-                    sum += Long.bitCount(generateMoves(opponentTokens, nextTokens));
+                    sum += Long.bitCount(TokenUtil.generateMoves(opponentTokens, nextTokens));
                 } else {
                     sum += fastPerft(opponentTokens, nextTokens, depth - 1);
                 }
