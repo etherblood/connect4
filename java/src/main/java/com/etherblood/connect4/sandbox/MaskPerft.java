@@ -69,18 +69,18 @@ public class MaskPerft {
         long sum = 0;
         while (moves != 0) {
             int moveIndex = Long.numberOfTrailingZeros(moves);
-            long move0 = MOVE_MASKS[INDEX_MULTIPLIER * moveIndex];
-            moves &= ~move0;
-            long new0 = own0 + move0;
-            if (((own0 & ~new0) & CARRY_MASK) != 0) {
-                continue;
-            }
+            moves &= ~MOVE_MASKS[INDEX_MULTIPLIER * moveIndex];
+            
+            // below may be improvable with SIMD
+            long new0 = own0 + MOVE_MASKS[INDEX_MULTIPLIER * moveIndex];
             long new1 = own1 + MOVE_MASKS[INDEX_MULTIPLIER * moveIndex + 1];
-            if (((own1 & ~new1) & CARRY_MASK) != 0) {
-                continue;
-            }
             long new2 = own2 + MOVE_MASKS[INDEX_MULTIPLIER * moveIndex + 2];
-            if (((own2 & ~new2) & CARRY_MASK) != 0) {
+            
+            long check0 = (own0 & ~new0) & CARRY_MASK;
+            long check1 = (own1 & ~new1) & CARRY_MASK;
+            long check2 = (own2 & ~new2) & CARRY_MASK;
+            
+            if ((check0 | check1 | check2) != 0) {
                 continue;
             }
             if (depth == 2) {

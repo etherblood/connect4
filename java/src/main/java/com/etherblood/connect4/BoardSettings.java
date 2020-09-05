@@ -2,7 +2,7 @@ package com.etherblood.connect4;
 
 /**
  * Making the fields & methods here static improves speed (~25% faster last measured),
- * but it would be much harder tto test different board sizes.
+ * but it would be much harder to test different board sizes.
  */
 public class BoardSettings {
 
