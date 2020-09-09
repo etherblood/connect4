@@ -61,7 +61,7 @@ public class BoardSettings {
         return result;
     }
 
-    public long move(long tokens, long moves) {
+    public static long move(long tokens, long moves) {
         return tokens | moves;
     }
 
@@ -104,13 +104,13 @@ public class BoardSettings {
                 & free;
     }
 
-    public long squish(long tokens, int directionShift) {
+    public static long squish(long tokens, int directionShift) {
         tokens &= tokens >>> (2 * directionShift);
         tokens &= tokens >>> directionShift;
         return tokens;
     }
 
-    public long stretch(long tokens, int directionShift) {
+    public static long stretch(long tokens, int directionShift) {
         tokens |= tokens << (2 * directionShift);
         tokens |= tokens << directionShift;
         return tokens;
@@ -120,7 +120,7 @@ public class BoardSettings {
         return (occupied(ownTokens, opponentTokens) + ROW_0) & FULL_BOARD;
     }
 
-    public long occupied(long ownTokens, long opponentTokens) {
+    public static long occupied(long ownTokens, long opponentTokens) {
         return ownTokens | opponentTokens;
     }
 

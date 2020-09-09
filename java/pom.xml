@@ -21,7 +21,7 @@
                 <configuration>
                     <archive>
                         <manifest>
-                            <mainClass>com.etherblood.connect4.solver.TokenSolver</mainClass>
+                            <mainClass>com.etherblood.connect4.solver.SolveDefaultBoard</mainClass>
                         </manifest>
                     </archive>
                 </configuration>
