@@ -51,6 +51,7 @@ public class TwoBig1TranspositionTable implements TranspositionTable {
 
     @Override
     public void store(long id, long work, int score) {
+        assert work > 0;
         assert score == (score & SCORE_MASK);
         assert score != UNKNOWN_SCORE;
         stores++;
@@ -58,16 +59,18 @@ public class TwoBig1TranspositionTable implements TranspositionTable {
         int index = index(id);
         long rawEntry = table[index];
         int verifier = verifier(id);
+        long previousWorkScore = rawEntry >>> (2 * ENTRY_BITS);
         long newEntry = (score << VERIFY_BITS) | verifier;
         assert (newEntry & ENTRY_MASK) == newEntry;
 
         int raw2 = (int) (rawEntry >>> ENTRY_BITS);
         if ((raw2 & VERIFY_MASK) == verifier) {
+            workScore = Math.max(workScore, previousWorkScore);
+            
             rawEntry &= ENTRY_MASK;
             rawEntry |= newEntry << ENTRY_BITS;
             rawEntry |= workScore << (2 * ENTRY_BITS);
         } else {
-            long previousWorkScore = rawEntry >>> (2 * ENTRY_BITS);
             if (workScore >= previousWorkScore) {
                 rawEntry >>>= ENTRY_BITS;
                 rawEntry &= ENTRY_MASK;
