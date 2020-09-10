@@ -1,7 +1,13 @@
 package com.etherblood.connect4.solver;
 
 import com.etherblood.connect4.Util;
+import static com.etherblood.connect4.solver.TranspositionTable.DRAW_OR_LOSS_SCORE;
+import static com.etherblood.connect4.solver.TranspositionTable.DRAW_OR_WIN_SCORE;
+import static com.etherblood.connect4.solver.TranspositionTable.DRAW_SCORE;
+import static com.etherblood.connect4.solver.TranspositionTable.LOSS_SCORE;
+import static com.etherblood.connect4.solver.TranspositionTable.WIN_SCORE;
 import java.util.Arrays;
+import java.util.List;
 
 public class TranspositionTableImpl implements TranspositionTable {
 
@@ -37,9 +43,7 @@ public class TranspositionTableImpl implements TranspositionTable {
     @Override
     public void store(long id, long work, int score) {
         assert (score >>> SCORE_BITS) == 0;
-        assert score != EMPTY_SCORE;
         assert score != UNKNOWN_SCORE;
-        assert score != WIN_OR_LOSS_SCORE;
         stores++;
         long hash = hash(id);
         int index = index(hash);
@@ -73,17 +77,16 @@ public class TranspositionTableImpl implements TranspositionTable {
         System.out.println(" stores: " + stores);
         System.out.println("  unused: " + scores[TranspositionTable.UNKNOWN_SCORE]);
         System.out.println("  full: " + (table.length - scores[TranspositionTable.UNKNOWN_SCORE]));
-        for (int i = 0; i < scores.length; i++) {
-            if (i == TranspositionTable.UNKNOWN_SCORE || i == TranspositionTable.EMPTY_SCORE || i == TranspositionTable.WIN_OR_LOSS_SCORE) {
-                continue;
-            }
-            System.out.println("   " + TranspositionTable.scoreToString(i) + ": " + scores[i]);
+        List<Integer> usefulScores = Arrays.asList(WIN_SCORE, DRAW_SCORE, LOSS_SCORE, DRAW_OR_WIN_SCORE, DRAW_OR_LOSS_SCORE);
+        for (int usefulScore : usefulScores) {
+            System.out.println("   " + TranspositionTable.scoreToString(usefulScore) + ": " + scores[usefulScore]);
         }
     }
 
     @Override
     public final void clear() {
-        Arrays.fill(table, ~0);
+        int unknownScore = UNKNOWN_SCORE << VERIFY_BITS;
+        Arrays.fill(table, unknownScore);
         hits = 0;
         misses = 0;
         stores = 0;

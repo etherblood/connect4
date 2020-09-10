@@ -131,11 +131,11 @@ public class TokenSolver {
     private void resetHistory() {
         Arrays.fill(history, 0);
         for (int direction : Arrays.asList(board.RIGHT, board.UP, board.RIGHT_DOWN, board.RIGHT_UP)) {
-            long fullSquished = board.squish(board.FULL_BOARD, direction);
+            long fullSquished = BoardSettings.squish(board.FULL_BOARD, direction);
             while (fullSquished != 0) {
                 long squished = Long.lowestOneBit(fullSquished);
                 fullSquished ^= squished;
-                long items = board.stretch(squished, direction);
+                long items = BoardSettings.stretch(squished, direction);
                 while (items != 0) {
                     int itemIndex = Long.numberOfTrailingZeros(items);
                     long item = 1L << itemIndex;
@@ -171,7 +171,7 @@ public class TokenSolver {
                 return LOSS_SCORE;
             }
             // search forced move, skip TT
-            return -solve(opponentTokens, board.move(ownTokens, forcedMove), -beta, -alpha);
+            return -solve(opponentTokens, BoardSettings.move(ownTokens, forcedMove), -beta, -alpha);
         }
         if (FOLLOW_UP_STRATEGY_TEST_ENABLED && board.IS_HEIGHT_EVEN && Long.bitCount(moves & board.ODD_INDEX_ROWS) == 1) {
             if ((opponentThreats & board.EVEN_INDEX_ROWS) == 0) {
@@ -215,10 +215,10 @@ public class TokenSolver {
                 return LOSS_SCORE;
             }
             // only 1 move, skip TT
-            return -solve(opponentTokens, board.move(ownTokens, reducedMoves), -beta, -alpha);
+            return -solve(opponentTokens, BoardSettings.move(ownTokens, reducedMoves), -beta, -alpha);
         }
 
-        int player = Long.bitCount(board.occupied(ownTokens, opponentTokens)) & 1;
+        int player = Long.bitCount(BoardSettings.occupied(ownTokens, opponentTokens)) & 1;
         TranspositionTable table = player != 0 ? oddTable : evenTable;
         long symmetricId = Math.min(id, mirroredId);
         int entryScore = table.load(symmetricId);
@@ -258,7 +258,7 @@ public class TokenSolver {
         long movesIterator = reducedMoves;
         while (movesIterator != 0) {
             long move = findBestHistoryMove(movesIterator);
-            int score = -solve(opponentTokens, board.move(ownTokens, move), -beta, -alpha);
+            int score = -solve(opponentTokens, BoardSettings.move(ownTokens, move), -beta, -alpha);
             if (score > alpha) {
                 if (score >= beta) {
                     if (beta == WIN_SCORE) {

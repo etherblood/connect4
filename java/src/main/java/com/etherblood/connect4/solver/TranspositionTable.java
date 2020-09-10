@@ -6,13 +6,11 @@ package com.etherblood.connect4.solver;
  */
 public interface TranspositionTable {
 
-    static final int EMPTY_SCORE = 0;
     static final int WIN_SCORE = 1;
     static final int DRAW_SCORE = 2;
     static final int LOSS_SCORE = 4;
     static final int DRAW_OR_WIN_SCORE = DRAW_SCORE | WIN_SCORE;
     static final int DRAW_OR_LOSS_SCORE = LOSS_SCORE | DRAW_SCORE;
-    static final int WIN_OR_LOSS_SCORE = LOSS_SCORE | WIN_SCORE;
     static final int UNKNOWN_SCORE = LOSS_SCORE | DRAW_SCORE | WIN_SCORE;
 
     int load(long id);
@@ -37,8 +35,6 @@ public interface TranspositionTable {
                 return "draw+";
             case DRAW_OR_LOSS_SCORE:
                 return "draw-";
-            case EMPTY_SCORE:
-                return "empty";
             default:
                 throw new AssertionError();
         }

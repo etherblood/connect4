@@ -1,19 +1,19 @@
 package com.etherblood.connect4;
 
 /**
- * Making the fields & methods here static improves speed (~25% faster last measured),
- * but it would be much harder to test different board sizes.
+ * Making the fields & methods here static improves speed (~25% faster last
+ * measured), but it would be much harder to test different board sizes.
  */
 public class BoardSettings {
 
     public final int WIDTH, HEIGHT, BUFFERED_HEIGHT;
-    public final long ROW_0, COLUMN_0, BUFFERED_COLUMN_0;
     public final long FULL_BOARD, LEFT_SIDE, CENTER_BUFFERED_COLUMN;
     public final long EVEN_INDEX_ROWS, ODD_INDEX_ROWS;
     public final int RIGHT, RIGHT_DOWN, RIGHT_UP, UP;
     public final boolean IS_HEIGHT_EVEN;
 
-    public final long[] WIN_CHECK_PATTERNS = new long[4];
+    private final long ROW_0, COLUMN_0, BUFFERED_COLUMN_0;
+    private final long[] WIN_CHECK_PATTERNS = new long[4];
 
     public BoardSettings(int width, int height) {
         WIDTH = width;
@@ -155,7 +155,7 @@ public class BoardSettings {
         for (int y = HEIGHT - 1; y >= 0; y--) {
             for (int x = 0; x < WIDTH; x++) {
                 long flag = Util.toLongFlag(index(x, y));
-                if((threats & flag) != 0) {
+                if ((threats & flag) != 0) {
                     builder.append('(');
                 } else {
                     builder.append('[');
@@ -167,7 +167,7 @@ public class BoardSettings {
                 } else {
                     builder.append(' ');
                 }
-                if((threats & flag) != 0) {
+                if ((threats & flag) != 0) {
                     builder.append(')');
                 } else {
                     builder.append(']');
