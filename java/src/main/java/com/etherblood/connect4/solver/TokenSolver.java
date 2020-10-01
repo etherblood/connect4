@@ -11,7 +11,9 @@ import java.util.stream.Collectors;
 public class TokenSolver {
 
     private static final boolean FOLLOW_UP_STRATEGY_TEST_ENABLED = true;
+    private static final boolean FOLLOW_UP_STRATEGY_TEST_3_ENABLED = true;
     private static final boolean NO_WINS_REMAINING_TEST_ENABLED = true;
+    private static final boolean TWO_MOVES_LEFT_DRAW = false;
 
     public static final int WIN_SCORE = 1;
     public static final int DRAW_SCORE = 0;
@@ -158,39 +160,12 @@ public class TokenSolver {
             return DRAW_SCORE;
         }
         long opponentThreats = board.threats(opponentTokens, ownTokens);
-        long forcedMoves = moves & opponentThreats;
-        long losingSquares = opponentThreats >>> board.UP;
-        if (forcedMoves != 0) {
-            if ((forcedMoves & losingSquares) != 0) {
-                // forced to play a losing move
-                return LOSS_SCORE;
+        if (opponentThreats == 0) {
+            if (TWO_MOVES_LEFT_DRAW && Long.bitCount(board.unoccupied(ownTokens, opponentTokens)) <= 2) {
+                // at most 2 moves left and neither player has threats
+                return DRAW_SCORE;
             }
-            long forcedMove = Long.lowestOneBit(forcedMoves);
-            if (forcedMove != forcedMoves) {
-                // there are multiple forced moves which can't all be played
-                return LOSS_SCORE;
-            }
-            // search forced move, skip TT
-            return -solve(opponentTokens, BoardSettings.move(ownTokens, forcedMove), -beta, -alpha);
-        }
-        if (FOLLOW_UP_STRATEGY_TEST_ENABLED && board.IS_HEIGHT_EVEN && Long.bitCount(moves & board.ODD_INDEX_ROWS) == 1) {
-            if ((opponentThreats & board.EVEN_INDEX_ROWS) == 0) {
-                long opponentEvenFill = opponentTokens | (~ownTokens & board.EVEN_INDEX_ROWS);
-                if (!board.isNonVerticalWin(opponentEvenFill)) {
-                    // opponent can't win against follow up strategy
-                    if (beta <= DRAW_SCORE) {
-                        return DRAW_SCORE;
-                    }
-                    long ownOddFill = ownTokens | (~opponentTokens & board.ODD_INDEX_ROWS);
-                    if (board.isNonVerticalWin(ownOddFill)) {
-                        return WIN_SCORE;
-                    }
-                    alpha = DRAW_SCORE;
-                }
-            }
-        }
-        if (NO_WINS_REMAINING_TEST_ENABLED && beta > DRAW_SCORE) {
-            if (opponentThreats == 0) {
+            if (NO_WINS_REMAINING_TEST_ENABLED && beta > DRAW_SCORE) {
                 if (!board.isNonVerticalWin(~opponentTokens & board.FULL_BOARD)) {
                     // can't win anymore
                     if (alpha >= DRAW_SCORE) {
@@ -199,14 +174,80 @@ public class TokenSolver {
                     beta = DRAW_SCORE;
                 }
             }
+        } else {
+            long forcedMoves = moves & opponentThreats;
+            if (forcedMoves != 0) {
+                long losingSquares = opponentThreats >>> board.UP;
+                if ((forcedMoves & losingSquares) != 0) {
+                    // forced to play a losing move
+                    return LOSS_SCORE;
+                }
+                long forcedMove = Long.lowestOneBit(forcedMoves);
+                if (forcedMove != forcedMoves) {
+                    // there are multiple forced moves which can't all be played
+                    return LOSS_SCORE;
+                }
+                // search forced move, skip TT
+                return -solve(opponentTokens, BoardSettings.move(ownTokens, forcedMove), -beta, -alpha);
+            }
+        }
+        if (FOLLOW_UP_STRATEGY_TEST_ENABLED) {
+            if ((opponentThreats & board.EVEN_DISTANCE_ROWS) == 0) {
+                long oddMoves = moves & board.ODD_DISTANCE_ROWS;
+                int oddMovesCount = Long.bitCount(oddMoves);
+                if (oddMovesCount == 1) {
+                    long opponentEvenFill = opponentTokens | (~ownTokens & board.EVEN_DISTANCE_ROWS);
+                    if (!board.isNonVerticalWin(opponentEvenFill)) {
+                        // opponent can't win against follow up strategy
+                        if (beta <= DRAW_SCORE) {
+                            return DRAW_SCORE;
+                        }
+                        long ownOddFill = board.FULL_BOARD ^ opponentEvenFill;
+                        if (board.isNonVerticalWin(ownOddFill)) {
+                            return WIN_SCORE;
+                        }
+                        alpha = DRAW_SCORE;
+                    }
+                } else if (FOLLOW_UP_STRATEGY_TEST_3_ENABLED && oddMovesCount == 3) {
+                    int forcedDrawCount = 0;
+                    int forcedWinCount = 0;
+                    long iterator = oddMoves;
+                    while (iterator != 0) {
+                        long move = Long.lowestOneBit(iterator);
+
+                        long opponentFill = move | opponentTokens | (~ownTokens & board.EVEN_DISTANCE_ROWS);
+                        if (!board.isWin(opponentFill)) {// vertical check required
+                            forcedDrawCount++;
+
+                            long ownFill = board.FULL_BOARD ^ opponentFill;
+                            if (board.isNonVerticalWin(ownFill)) {
+                                forcedWinCount++;
+                            }
+                        }
+
+                        iterator ^= move;
+                    }
+                    if (forcedDrawCount >= 2) {
+                        // opponent can't win against follow up strategy
+                        if (forcedWinCount >= 2) {
+                            return WIN_SCORE;
+                        }
+                        if (beta <= DRAW_SCORE) {
+                            return DRAW_SCORE;
+                        }
+                        alpha = DRAW_SCORE;
+                    }
+                }
+            }
         }
         long id = board.id(ownTokens, opponentTokens);
         long mirroredId = board.mirror(id);
         assert board.mirror(mirroredId) == id;
-        // losing moves won't improve alpha and can be pruned
+        // losing moves can't improve alpha and can be pruned
+        long losingSquares = opponentThreats >>> board.UP;
         long reducedMoves = moves & ~losingSquares;
         if (id == mirroredId) {
-            // symmetric moves won't improve over their counterpart and can be pruned
+            // symmetric moves can't improve over their counterpart and can be pruned
             reducedMoves &= board.LEFT_SIDE | board.CENTER_BUFFERED_COLUMN;
         }
         if (reducedMoves == Long.lowestOneBit(reducedMoves)) {
@@ -218,7 +259,8 @@ public class TokenSolver {
             return -solve(opponentTokens, BoardSettings.move(ownTokens, reducedMoves), -beta, -alpha);
         }
 
-        int player = Long.bitCount(BoardSettings.occupied(ownTokens, opponentTokens)) & 1;
+        int occupiedCount = Long.bitCount(BoardSettings.occupied(ownTokens, opponentTokens));
+        int player = occupiedCount & 1;
         TranspositionTable table = player != 0 ? oddTable : evenTable;
         long symmetricId = Math.min(id, mirroredId);
         int entryScore = table.load(symmetricId);

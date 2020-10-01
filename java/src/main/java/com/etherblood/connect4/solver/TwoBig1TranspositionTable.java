@@ -17,7 +17,7 @@ public class TwoBig1TranspositionTable implements TranspositionTable {
     private static final long ENTRY_MASK = Util.toLongMask(ENTRY_BITS);
 
     private final long[] table;
-    private long hits, misses, stores;
+    private long hits, misses, stores, updates, small;
 
     public TwoBig1TranspositionTable(long size, BoardSettings board) {
         this.table = new long[Math.toIntExact(PrimeUtil.primeLessOrEqual(size / 2))];
@@ -51,11 +51,12 @@ public class TwoBig1TranspositionTable implements TranspositionTable {
 
     @Override
     public void store(long id, long work, int score) {
-        assert work > 0;
         assert score == (score & SCORE_MASK);
         assert score != UNKNOWN_SCORE;
+        assert work > 0;
+        long workScore = Util.floorLog(work);
+        assert workScore == (workScore & WORK_MASK);
         stores++;
-        long workScore = Math.min(WORK_MASK, Util.floorLog(work));
         int index = index(id);
         long rawEntry = table[index];
         int verifier = verifier(id);
@@ -65,8 +66,9 @@ public class TwoBig1TranspositionTable implements TranspositionTable {
 
         int raw2 = (int) (rawEntry >>> ENTRY_BITS);
         if ((raw2 & VERIFY_MASK) == verifier) {
+            updates++;
             workScore = Math.max(workScore, previousWorkScore);
-            
+
             rawEntry &= ENTRY_MASK;
             rawEntry |= newEntry << ENTRY_BITS;
             rawEntry |= workScore << (2 * ENTRY_BITS);
@@ -77,6 +79,9 @@ public class TwoBig1TranspositionTable implements TranspositionTable {
                 rawEntry |= newEntry << ENTRY_BITS;
                 rawEntry |= workScore << (2 * ENTRY_BITS);
             } else {
+                if ((rawEntry & VERIFY_MASK) == verifier) {
+                    small++;
+                }
                 rawEntry &= ~ENTRY_MASK;
                 rawEntry |= newEntry;
             }
@@ -108,6 +113,8 @@ public class TwoBig1TranspositionTable implements TranspositionTable {
         System.out.println(" hits: " + hits + " - " + Util.toPercentage(hits, hits + misses, 1));
         System.out.println(" misses: " + misses + " - " + Util.toPercentage(misses, hits + misses, 1));
         System.out.println(" overwrites: " + (stores - full));
+        System.out.println(" big updates: " + updates);
+        System.out.println(" small updates: " + small);
         System.out.println(" loads: " + (hits + misses));
         System.out.println(" stores: " + stores);
         System.out.println("  unused: " + scores[TranspositionTable.UNKNOWN_SCORE] + " - " + Util.toPercentage(scores[TranspositionTable.UNKNOWN_SCORE], size, 1));
@@ -126,5 +133,7 @@ public class TwoBig1TranspositionTable implements TranspositionTable {
         hits = 0;
         misses = 0;
         stores = 0;
+        updates = 0;
+        small = 0;
     }
 }

@@ -3,8 +3,8 @@ package com.etherblood.connect4.solver;
 import com.etherblood.connect4.BoardSettings;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import org.junit.Test;
 import static org.junit.Assert.*;
+import org.junit.Test;
 
 /**
  *
@@ -54,17 +54,18 @@ public class TokenSolverTest {
         gameResults.put(new BoardSettings(4, 9), TokenSolver.DRAW_SCORE);
 //        gameResults.put(new BoardSettings(5, 9), TokenSolver.DRAW_SCORE);
 //        gameResults.put(new BoardSettings(6, 9), TokenSolver.WIN_SCORE);
-        
+
         gameResults.put(new BoardSettings(4, 10), TokenSolver.DRAW_SCORE);
 //        gameResults.put(new BoardSettings(5, 10), TokenSolver.DRAW_SCORE);
-        
+
         gameResults.put(new BoardSettings(4, 11), TokenSolver.DRAW_SCORE);
 
+        long tableSize = 1L << 28;
         for (Map.Entry<BoardSettings, Integer> entry : gameResults.entrySet()) {
             BoardSettings settings = entry.getKey();
             int expectedSolution = entry.getValue();
-            TranspositionTable oddTable = new TwoBig1TranspositionTable(1 << 25, settings);
-            TranspositionTable evenTable = new TwoBig1TranspositionTable(1 << 25, settings);
+            TranspositionTable oddTable = new TwoBig1TranspositionTable(tableSize, settings);
+            TranspositionTable evenTable = new TwoBig1TranspositionTable(tableSize, settings);
             System.out.println(settings.WIDTH + " x " + settings.HEIGHT);
             TokenSolver solver = new TokenSolver(settings, oddTable, evenTable);
             int solution = solver.solveVerbose(0, 0);
