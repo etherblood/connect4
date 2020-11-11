@@ -73,7 +73,7 @@ perft_start:
     and r13, r12 ; moves generated into r13
 
     dec r14
-    jnz loop_start
+    jnz loop_start ; loop while moves are left
     popcnt r13, r13
     add r15, r13
 
