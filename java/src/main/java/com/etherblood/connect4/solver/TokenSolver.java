@@ -192,11 +192,11 @@ public class TokenSolver {
             }
         }
         if (FOLLOW_UP_STRATEGY_TEST_ENABLED) {
-            if ((opponentThreats & board.EVEN_DISTANCE_ROWS) == 0) {
-                long oddMoves = moves & board.ODD_DISTANCE_ROWS;
+            if ((opponentThreats & board.EVEN_FILLCOUNT_ROWS) == 0) {
+                long oddMoves = moves & board.ODD_FILLCOUNT_ROWS;
                 int oddMovesCount = Long.bitCount(oddMoves);
                 if (oddMovesCount == 1) {
-                    long opponentEvenFill = opponentTokens | (~ownTokens & board.EVEN_DISTANCE_ROWS);
+                    long opponentEvenFill = opponentTokens | (~ownTokens & board.EVEN_FILLCOUNT_ROWS);
                     if (!board.isNonVerticalWin(opponentEvenFill)) {
                         // opponent can't win against follow up strategy
                         if (beta <= DRAW_SCORE) {
@@ -215,7 +215,7 @@ public class TokenSolver {
                     while (iterator != 0) {
                         long move = Long.lowestOneBit(iterator);
 
-                        long opponentFill = move | opponentTokens | (~ownTokens & board.EVEN_DISTANCE_ROWS);
+                        long opponentFill = move | opponentTokens | (~ownTokens & board.EVEN_FILLCOUNT_ROWS);
                         if (!board.isWin(opponentFill)) {// vertical check required
                             forcedDrawCount++;
 

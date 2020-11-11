@@ -1,14 +1,14 @@
 package com.etherblood.connect4;
 
 /**
- * Making the fields & methods here static improves speed (~25% faster last
+ * Making the fields & methods static improves speed (~25% faster last
  * measured), but it would be much harder to test different board sizes.
  */
 public class BoardSettings {
 
     public final int WIDTH, HEIGHT, BUFFERED_HEIGHT, SIZE;
     public final long FULL_BOARD, LEFT_SIDE, CENTER_BUFFERED_COLUMN;
-    public final long EVEN_DISTANCE_ROWS, ODD_DISTANCE_ROWS;
+    public final long EVEN_FILLCOUNT_ROWS, ODD_FILLCOUNT_ROWS;
     public final int RIGHT, RIGHT_DOWN, RIGHT_UP, UP;
     public final boolean IS_HEIGHT_EVEN;
 
@@ -37,8 +37,8 @@ public class BoardSettings {
         LEFT_SIDE = FULL_BOARD >>> (Util.ceilDiv(WIDTH, 2) * RIGHT);
         CENTER_BUFFERED_COLUMN = (WIDTH & 1) != 0 ? BUFFERED_COLUMN_0 << (WIDTH / 2 * RIGHT) : 0;
 
-        EVEN_DISTANCE_ROWS = (COLUMN_0 / 3) * ROW_0;
-        ODD_DISTANCE_ROWS = FULL_BOARD ^ EVEN_DISTANCE_ROWS;
+        EVEN_FILLCOUNT_ROWS = (COLUMN_0 / 3) * ROW_0;
+        ODD_FILLCOUNT_ROWS = FULL_BOARD ^ EVEN_FILLCOUNT_ROWS;
 
         for (int y = 0; y < HEIGHT; y++) {
             for (int x = 0; x < WIDTH; x++) {
